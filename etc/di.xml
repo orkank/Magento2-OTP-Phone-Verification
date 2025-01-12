@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="IDangerous\PhoneOtpVerification\Model\OtpManager">
+        <arguments>
+            <argument name="smsService" xsi:type="object">IDangerous\Sms\Model\Api\SmsService</argument>
+            <argument name="session" xsi:type="object">Magento\Customer\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
+
+    <type name="Magento\Customer\Model\AccountManagement">
+        <plugin name="save_phone_number" type="IDangerous\PhoneOtpVerification\Plugin\Customer\Model\AccountManagementPlugin" />
+    </type>
+</config>
