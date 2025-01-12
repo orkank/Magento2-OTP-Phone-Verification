@@ -6,6 +6,7 @@ use Magento\Customer\Setup\CustomerSetupFactory;
 use Magento\Framework\Setup\ModuleDataSetupInterface;
 use Magento\Framework\Setup\Patch\DataPatchInterface;
 use Magento\Framework\Setup\Patch\PatchRevertableInterface;
+use Magento\Eav\Model\Entity\Attribute\Source\Boolean;
 
 class AddPhoneNumberCustomerAttribute implements DataPatchInterface, PatchRevertableInterface
 {
@@ -45,6 +46,7 @@ class AddPhoneNumberCustomerAttribute implements DataPatchInterface, PatchRevert
                 'type' => 'varchar',
                 'label' => 'Phone Number',
                 'input' => 'text',
+                'source' => \Magento\Eav\Model\Entity\Attribute\Source\Table::class,
                 'required' => false,
                 'visible' => true,
                 'user_defined' => true,
@@ -64,7 +66,7 @@ class AddPhoneNumberCustomerAttribute implements DataPatchInterface, PatchRevert
                 'type' => 'int',
                 'label' => 'Phone Verified',
                 'input' => 'boolean',
-                'source' => \Magento\Eav\Model\Entity\Attribute\Source\Boolean::class,
+                'source' => Boolean::class,
                 'required' => false,
                 'visible' => true,
                 'user_defined' => true,

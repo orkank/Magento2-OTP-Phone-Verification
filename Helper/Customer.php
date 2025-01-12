@@ -49,6 +49,7 @@ class Customer extends AbstractHelper
                 }
 
                 $verifiedAttribute = $customer->getCustomAttribute('phone_verified');
+
                 if (!$verifiedAttribute) {
                     $this->_logger->debug('Creating phone_verified attribute');
                     $customer->setCustomAttribute('phone_verified', 1);
