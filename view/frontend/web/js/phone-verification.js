@@ -5,8 +5,23 @@ define([
     'use strict';
 
     return function (config) {
+        // Load saved phone from localStorage if exists (for registration only)
+        if (!config.isLoggedIn) {
+            var savedPhone = localStorage.getItem('registration_phone');
+            var savedVerified = localStorage.getItem('registration_phone_verified');
+
+            if (savedPhone) {
+                $('#phone').val(savedPhone);
+                if (savedVerified === '1') {
+                    $('#phone').prop('readonly', true);
+                    $('#send-otp').prop('disabled', true);
+                    $('#phone-verified').val(1);
+                    $('#phone-verification-status').text($t('Phone Verified')).addClass('verified').removeClass('not-verified');
+                }
+            }
+        }
+
         if (!config.isOptional) {
-            // Add form validation if verification is required
             $('form.form-create-account').on('submit', function(e) {
                 if ($('#phone-verified').val() !== '1') {
                     e.preventDefault();
@@ -21,6 +36,11 @@ define([
             e.preventDefault();
             var phone = $('#phone').val();
 
+            // Store phone in localStorage for registration
+            if (!config.isLoggedIn) {
+                localStorage.setItem('registration_phone', phone);
+            }
+
             $.ajax({
                 url: config.sendOtpUrl,
                 type: 'POST',
@@ -29,7 +49,6 @@ define([
                     phone: phone
                 },
                 success: function (response) {
-                    console.log('Send OTP Response:', response);
                     if (response.success) {
                         $('#otp-section').show();
                         alert(response.message);
@@ -39,7 +58,7 @@ define([
                 },
                 error: function (xhr, status, error) {
                     console.error('Send OTP Error:', error);
-                    alert('Error sending OTP. Please try again.');
+                    alert($t('Error sending OTP. Please try again.'));
                 }
             });
         });
@@ -47,8 +66,6 @@ define([
         $(document).on('click', '#verify-otp', function (e) {
             e.preventDefault();
             var otp = $('#otp-input').val();
-
-            console.log('Sending OTP for verification:', otp);
 
             $.ajax({
                 url: config.verifyOtpUrl,
@@ -58,29 +75,38 @@ define([
                     otp: otp
                 },
                 success: function (response) {
-                    console.log('Verify OTP Response:', response);
                     if (response.success) {
                         $('#phone-verified').val(1);
                         $('#otp-section').hide();
+                        $('#phone').prop('readonly', true);
+                        $('#send-otp').prop('disabled', true);
                         $('#phone-verification-status').text($t('Phone Verified')).addClass('verified').removeClass('not-verified');
+
+                        // Store verification status for registration
+                        if (!config.isLoggedIn) {
+                            localStorage.setItem('registration_phone_verified', '1');
+                        }
+
                         alert(response.message);
-                        // Refresh the page to show updated information
-                        window.location.reload();
                     } else {
                         alert(response.message);
                     }
                 },
                 error: function (xhr, status, error) {
                     console.error('Verify OTP Error:', error);
-                    alert('Error verifying OTP. Please try again.');
+                    alert($t('Error verifying OTP. Please try again.'));
                 }
             });
         });
 
-        $(document).on('click', '#skip-verification', function (e) {
-            e.preventDefault();
-            $('#otp-section').hide();
-            $('#phone-verification-status').text($t('Not Verified')).addClass('not-verified').removeClass('verified');
+        // Clear localStorage after successful registration
+        $('form.form-create-account').on('submit', function() {
+            if ($('#phone-verified').val() === '1') {
+                setTimeout(function() {
+                    localStorage.removeItem('registration_phone');
+                    localStorage.removeItem('registration_phone_verified');
+                }, 1000);
+            }
         });
     };
 });
