@@ -5,6 +5,7 @@ namespace IDangerous\PhoneOtpVerification\Model;
 use Magento\Customer\Model\Session;
 use Magento\Framework\Exception\LocalizedException;
 use IDangerous\Sms\Model\Api\SmsService;
+use Magento\Customer\Model\ResourceModel\Customer\CollectionFactory;
 
 class OtpManager
 {
@@ -19,20 +20,55 @@ class OtpManager
     protected $smsService;
 
     /**
+     * @var CollectionFactory
+     */
+    protected $customerCollectionFactory;
+
+    /**
      * @param SmsService $smsService
      * @param Session $session
+     * @param CollectionFactory $customerCollectionFactory
      */
     public function __construct(
         SmsService $smsService,
-        Session $session
+        Session $session,
+        CollectionFactory $customerCollectionFactory
     ) {
         $this->smsService = $smsService;
         $this->session = $session;
+        $this->customerCollectionFactory = $customerCollectionFactory;
+    }
+
+    protected function isPhoneAvailable($phone)
+    {
+        // Skip validation for logged-in users updating their own number
+        if ($this->session->isLoggedIn()) {
+            $currentCustomer = $this->session->getCustomer();
+            $currentPhone = $currentCustomer->getCustomAttribute('phone_number');
+            if ($currentPhone && $currentPhone->getValue() === $phone) {
+                return true;
+            }
+        }
+
+        $collection = $this->customerCollectionFactory->create();
+        $collection->addAttributeToSelect('phone_number')
+                  ->addAttributeToSelect('phone_verified')
+                  ->addAttributeToFilter('phone_number', $phone)
+                  ->addAttributeToFilter('phone_verified', 1);
+
+        return $collection->getSize() === 0;
     }
 
     public function sendOtp($phone)
     {
         try {
+            // Check if phone is available (only for non-logged in users or different number)
+            if (!$this->isPhoneAvailable($phone)) {
+                throw new LocalizedException(
+                    __('This phone number is already registered and verified by another user.')
+                );
+            }
+
             $otp = $this->generateOtp();
             $message = "Your verification code is: " . $otp;
 

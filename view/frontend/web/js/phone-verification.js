@@ -5,10 +5,36 @@ define([
     'use strict';
 
     return function (config) {
+        const EXPIRY_TIME = 3 * 60 * 1000; // 3 minutes in milliseconds
+
+        function setStorageWithExpiry(key, value) {
+            const item = {
+                value: value,
+                timestamp: new Date().getTime(),
+                expiry: EXPIRY_TIME
+            };
+            localStorage.setItem(key, JSON.stringify(item));
+        }
+
+        function getStorageWithExpiry(key) {
+            const itemStr = localStorage.getItem(key);
+            if (!itemStr) return null;
+
+            const item = JSON.parse(itemStr);
+            const now = new Date().getTime();
+
+            // Check if item is expired
+            if (now - item.timestamp > item.expiry) {
+                localStorage.removeItem(key);
+                return null;
+            }
+            return item.value;
+        }
+
         // Load saved phone from localStorage if exists (for registration only)
         if (!config.isLoggedIn) {
-            var savedPhone = localStorage.getItem('registration_phone');
-            var savedVerified = localStorage.getItem('registration_phone_verified');
+            var savedPhone = getStorageWithExpiry('registration_phone');
+            var savedVerified = getStorageWithExpiry('registration_phone_verified');
 
             if (savedPhone) {
                 $('#phone').val(savedPhone);
@@ -36,9 +62,36 @@ define([
             e.preventDefault();
             var phone = $('#phone').val();
 
-            // Store phone in localStorage for registration
+            // First validate phone availability (only for registration)
             if (!config.isLoggedIn) {
-                localStorage.setItem('registration_phone', phone);
+                $.ajax({
+                    url: config.validatePhoneUrl,
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        phone: phone
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            sendOtp(phone);
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Validate Phone Error:', error);
+                        alert($t('Error validating phone number. Please try again.'));
+                    }
+                });
+            } else {
+                sendOtp(phone);
+            }
+        });
+
+        function sendOtp(phone) {
+            // Store phone in localStorage for registration with expiry
+            if (!config.isLoggedIn) {
+                setStorageWithExpiry('registration_phone', phone);
             }
 
             $.ajax({
@@ -61,7 +114,7 @@ define([
                     alert($t('Error sending OTP. Please try again.'));
                 }
             });
-        });
+        }
 
         $(document).on('click', '#verify-otp', function (e) {
             e.preventDefault();
@@ -82,9 +135,9 @@ define([
                         $('#send-otp').prop('disabled', true);
                         $('#phone-verification-status').text($t('Phone Verified')).addClass('verified').removeClass('not-verified');
 
-                        // Store verification status for registration
+                        // Store verification status for registration with expiry
                         if (!config.isLoggedIn) {
-                            localStorage.setItem('registration_phone_verified', '1');
+                            setStorageWithExpiry('registration_phone_verified', '1');
                         }
 
                         alert(response.message);
@@ -107,6 +160,47 @@ define([
                     localStorage.removeItem('registration_phone_verified');
                 }, 1000);
             }
+        });
+
+        // Add a timer to show remaining time
+        function startExpiryTimer() {
+            let timeLeft = EXPIRY_TIME / 1000; // Convert to seconds
+            const timerElement = $('<div id="otp-timer"></div>');
+            $('#otp-section').prepend(timerElement);
+
+            const timer = setInterval(function() {
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerElement.text($t('Time remaining: ') +
+                    minutes + ':' + (seconds < 10 ? '0' : '') + seconds);
+
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    $('#otp-section').hide();
+                    $('#phone').prop('readonly', false);
+                    $('#send-otp').prop('disabled', false);
+                    $('#phone-verified').val(0);
+                    localStorage.removeItem('registration_phone');
+                    localStorage.removeItem('registration_phone_verified');
+                    timerElement.remove();
+                    alert($t('OTP has expired. Please request a new one.'));
+                }
+            }, 1000);
+
+            // Store timer reference to clear it if needed
+            $('#otp-section').data('timer', timer);
+        }
+
+        // Start timer when OTP is sent
+        $(document).on('click', '#send-otp', function() {
+            // Clear existing timer if any
+            const existingTimer = $('#otp-section').data('timer');
+            if (existingTimer) {
+                clearInterval(existingTimer);
+                $('#otp-timer').remove();
+            }
+            startExpiryTimer();
         });
     };
 });

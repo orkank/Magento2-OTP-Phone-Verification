@@ -1,5 +1,6 @@
 <?php
 /** @var \Magento\Customer\Block\Form\Edit $block */
+$configHelper = $this->helper(\IDangerous\PhoneOtpVerification\Helper\Config::class);
 ?>
 <form class="form form-edit-account" action="<?= $block->escapeUrl($block->getUrl('customer/account/editPost')) ?>" method="post" id="form-validate" enctype="multipart/form-data" data-hasrequired="<?= $block->escapeHtmlAttr(__('* Required Fields')) ?>" autocomplete="off">
     <?= $block->getBlockHtml('formkey') ?>
@@ -26,7 +27,9 @@
                     value="<?= $block->escapeHtmlAttr($block->getCustomer()->getCustomAttribute('phone_number') ? $block->getCustomer()->getCustomAttribute('phone_number')->getValue() : '') ?>"
                     title="<?= $block->escapeHtmlAttr(__('Phone Number')) ?>"
                     class="input-text" />
-                <button type="button" id="send-otp" class="action secondary"><?= $block->escapeHtml(__('Send OTP')) ?></button>
+                <button type="button" id="send-otp" class="action save primary action"><?= $block->escapeHtml(__('Send OTP')) ?></button>
+                <?php if (!$block->getCustomer()->getCustomAttribute('phone_verified') || !$block->getCustomer()->getCustomAttribute('phone_verified')->getValue()): ?>
+                <?php endif; ?>
                 <div id="phone-verification-status" class="phone-verification-status <?= $block->getCustomer()->getCustomAttribute('phone_verified') && $block->getCustomer()->getCustomAttribute('phone_verified')->getValue() ? 'verified' : 'not-verified' ?>">
                     <?= $block->getCustomer()->getCustomAttribute('phone_verified') && $block->getCustomer()->getCustomAttribute('phone_verified')->getValue() ? __('Verified') : __('Not Verified') ?>
                 </div>
@@ -86,8 +89,11 @@
 {
     "*": {
         "IDangerous_PhoneOtpVerification/js/phone-verification": {
-            "sendOtpUrl": "<?= $block->getUrl('phoneotp/otp/send') ?>",
-            "verifyOtpUrl": "<?= $block->getUrl('phoneotp/otp/verify') ?>"
+          "sendOtpUrl": "<?= $block->getUrl('phoneotp/otp/send') ?>",
+            "verifyOtpUrl": "<?= $block->getUrl('phoneotp/otp/verify') ?>",
+            "validatePhoneUrl": "<?= $block->getUrl('phoneotp/phone/validate') ?>",
+            "isOptional": <?= $configHelper->isOptionalForRegistration() ? 'true' : 'false' ?>,
+            "isLoggedIn": true
         }
     }
 }

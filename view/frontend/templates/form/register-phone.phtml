@@ -37,6 +37,7 @@ if ($configHelper->isEnabledForRegistration()):
             "IDangerous_PhoneOtpVerification/js/phone-verification": {
                 "sendOtpUrl": "<?= $block->getUrl('phoneotp/otp/send') ?>",
                 "verifyOtpUrl": "<?= $block->getUrl('phoneotp/otp/verify') ?>",
+                "validatePhoneUrl": "<?= $block->getUrl('phoneotp/phone/validate') ?>",
                 "isOptional": <?= $configHelper->isOptionalForRegistration() ? 'true' : 'false' ?>,
                 "isLoggedIn": false
             }
