@@ -2,21 +2,21 @@
 
 namespace IDangerous\PhoneOtpVerification\Model;
 
-use IDangerous\Sms\Model\Api\SmsService;
 use Magento\Customer\Model\Session;
 use Magento\Framework\Exception\LocalizedException;
+use IDangerous\Sms\Model\Api\SmsService;
 
 class OtpManager
 {
     /**
-     * @var SmsService
-     */
-    protected $smsService;
-
-    /**
      * @var Session
      */
     protected $session;
+
+    /**
+     * @var SmsService
+     */
+    protected $smsService;
 
     /**
      * @param SmsService $smsService
@@ -30,18 +30,11 @@ class OtpManager
         $this->session = $session;
     }
 
-    /**
-     * Send OTP to phone number
-     *
-     * @param string $phone
-     * @return string
-     * @throws LocalizedException
-     */
     public function sendOtp($phone)
     {
         try {
             $otp = $this->generateOtp();
-            $message = "Your OTP code is: " . $otp;
+            $message = "Your verification code is: " . $otp;
 
             // Store both OTP and phone number in session
             $this->session->setPhoneOtp([
@@ -50,30 +43,23 @@ class OtpManager
                 'timestamp' => time()
             ]);
 
-            // Also store phone separately for verification
-            $this->session->setVerifiedPhoneData([
-                'phone' => $phone,
-                'timestamp' => time()
-            ]);
+            $result = $this->smsService->sendOtpSms($phone, $message);
 
-            $this->smsService->sendOtpSms($phone, $message);
+            if (!$result['success']) {
+                throw new LocalizedException(__($result['message']));
+            }
+
             return $otp;
         } catch (\Exception $e) {
             throw new LocalizedException(__('Failed to send OTP: %1', $e->getMessage()));
         }
     }
 
-    /**
-     * Verify OTP code
-     *
-     * @param string $inputOtp
-     * @return bool
-     */
     public function verifyOtp($inputOtp)
     {
         $otpData = $this->session->getPhoneOtp();
 
-        if (!$otpData || !isset($otpData['code'])) {
+        if (!$otpData || !isset($otpData['code']) || !isset($otpData['phone'])) {
             return false;
         }
 
@@ -88,22 +74,14 @@ class OtpManager
         $inputOtp = trim((string)$inputOtp);
 
         if ($storedOtp === $inputOtp) {
-            // Keep the verified phone data in session
-            // The phone data is already stored in verifiedPhoneData from sendOtp
-
-            // Clear only the OTP data
-            $this->session->unsPhoneOtp();
+            // Keep the OTP data in session until verification is complete
+            // It will be used by the Verify controller to get the phone number
             return true;
         }
 
         return false;
     }
 
-    /**
-     * Generate 6-digit OTP
-     *
-     * @return string
-     */
     protected function generateOtp()
     {
         return str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);

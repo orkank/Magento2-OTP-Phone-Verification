@@ -1,0 +1,27 @@
+.verified {
+    color: #006400;
+    margin-top: 5px;
+    font-weight: bold;
+}
+
+.not-verified {
+    color: #8b0000;
+    margin-top: 5px;
+    font-weight: bold;
+}
+
+#phone {
+    margin-right: 10px;
+}
+
+#otp-section {
+    margin-top: 10px;
+}
+
+#otp-input {
+    margin-right: 10px;
+}
+
+#skip-verification {
+    margin-left: 10px;
+}

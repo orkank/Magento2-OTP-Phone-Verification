@@ -5,6 +5,18 @@ define([
     'use strict';
 
     return function (config) {
+        if (!config.isOptional) {
+            // Add form validation if verification is required
+            $('form.form-create-account').on('submit', function(e) {
+                if ($('#phone-verified').val() !== '1') {
+                    e.preventDefault();
+                    alert($t('Please verify your phone number before submitting.'));
+                    return false;
+                }
+                return true;
+            });
+        }
+
         $(document).on('click', '#send-otp', function (e) {
             e.preventDefault();
             var phone = $('#phone').val();

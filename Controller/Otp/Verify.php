@@ -39,33 +39,35 @@ class Verify extends Action
                 throw new \Exception(__('Please enter OTP code.'));
             }
 
-            // print_r($this->session->getData(), true);
-            // $this->_logger->debug('Session data before verification: ' . print_r($this->session->getData(), true));
-
             if ($this->otpManager->verifyOtp($inputOtp)) {
                 // Get the verified phone data from session
-                $verifiedPhoneData = $this->session->getVerifiedPhoneData();
-                $phone = $verifiedPhoneData['phone'] ?? '';
+                $otpData = $this->session->getPhoneOtp();
+                $phone = $otpData['phone'] ?? '';
 
                 if (!$phone) {
                     throw new \Exception(__('Phone number not found in session.'));
                 }
 
-                // Save the verified phone number
-                if ($this->customerHelper->saveVerifiedPhone($phone)) {
-                    // Clear the verified phone data from session after successful save
-                    $this->session->unsVerifiedPhoneData();
-
+                if ($this->session->isLoggedIn()) {
+                    // For logged-in users, save directly
+                    if ($this->customerHelper->saveVerifiedPhone($phone)) {
+                        return $result->setData([
+                            'success' => true,
+                            'message' => __('Phone number verified and saved successfully.')
+                        ]);
+                    }
+                    return $result->setData([
+                        'success' => false,
+                        'message' => __('Phone number verified but could not be saved. Please try again.')
+                    ]);
+                } else {
+                    // For registration, store in session
+                    $this->session->setRegistrationVerifiedPhone($phone);
                     return $result->setData([
                         'success' => true,
-                        'message' => __('Phone number verified and saved successfully.')
+                        'message' => __('Phone number verified successfully.')
                     ]);
                 }
-
-                return $result->setData([
-                    'success' => false,
-                    'message' => __('Phone number verified but could not be saved. Please try again.')
-                ]);
             }
 
             return $result->setData([

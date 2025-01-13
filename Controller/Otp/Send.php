@@ -5,24 +5,21 @@ use Magento\Framework\App\Action\Action;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\Controller\Result\JsonFactory;
 use IDangerous\PhoneOtpVerification\Model\OtpManager;
-use Magento\Framework\Session\SessionManagerInterface;
+use Magento\Framework\App\ObjectManager;
 
 class Send extends Action
 {
     protected $resultJsonFactory;
     protected $otpManager;
-    protected $session;
 
     public function __construct(
         Context $context,
         JsonFactory $resultJsonFactory,
-        OtpManager $otpManager,
-        SessionManagerInterface $session
+        OtpManager $otpManager
     ) {
         parent::__construct($context);
         $this->resultJsonFactory = $resultJsonFactory;
         $this->otpManager = $otpManager;
-        $this->session = $session;
     }
 
     public function execute()
@@ -30,17 +27,25 @@ class Send extends Action
         $result = $this->resultJsonFactory->create();
         try {
             $phone = $this->getRequest()->getParam('phone');
+
             if (!$phone) {
-                throw new \Exception(__('Phone number is required.'));
+                throw new \Exception(__('Please enter phone number.'));
             }
 
+            // Send OTP
             $otp = $this->otpManager->sendOtp($phone);
-            $this->session->setOtpCode($otp);
-            $this->session->setPhoneNumber($phone);
+
+            // Debug: Verify session data
+            $session = ObjectManager::getInstance()->get(\Magento\Customer\Model\Session::class);
+            $otpData = $session->getPhoneOtp();
+
+            if (!$otpData || !isset($otpData['phone'])) {
+                throw new \Exception(__('Failed to store phone number in session.'));
+            }
 
             return $result->setData([
                 'success' => true,
-                'message' => __('OTP sent successfully.')
+                'message' => __('OTP sent successfully to your phone number.')
             ]);
         } catch (\Exception $e) {
             return $result->setData([

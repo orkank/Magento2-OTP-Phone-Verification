@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <phone_otp>
+            <general>
+                <enabled>1</enabled>
+                <enable_registration>1</enable_registration>
+                <optional_registration>0</optional_registration>
+                <otp_message>Your verification code is: {otp}</otp_message>
+            </general>
+        </phone_otp>
+    </default>
+</config>

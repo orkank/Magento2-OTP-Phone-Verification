@@ -1,0 +1,45 @@
+<?php
+/** @var \Magento\Framework\View\Element\Template $block */
+/** @var \IDangerous\PhoneOtpVerification\Helper\Config $configHelper */
+$configHelper = $this->helper(\IDangerous\PhoneOtpVerification\Helper\Config::class);
+
+// Only show if enabled for registration
+if ($configHelper->isEnabledForRegistration()):
+?>
+    <div class="field phone required">
+        <label for="phone" class="label"><span><?= $block->escapeHtml(__('Phone Number')) ?></span></label>
+        <div class="control">
+            <input type="text" name="phone" id="phone" value="" class="input-text"
+                   data-validate="{required:<?= $configHelper->isOptionalForRegistration() ? 'false' : 'true' ?>}" />
+            <button type="button" id="send-otp" class="action secondary"><?= $block->escapeHtml(__('Send OTP')) ?></button>
+            <div id="phone-verification-status"></div>
+        </div>
+    </div>
+
+    <div id="otp-section" style="display: none;">
+        <div class="field otp required">
+            <label for="otp-input" class="label"><span><?= $block->escapeHtml(__('Enter OTP')) ?></span></label>
+            <div class="control">
+                <input type="text" id="otp-input" class="input-text" />
+                <button type="button" id="verify-otp" class="action primary"><?= $block->escapeHtml(__('Verify OTP')) ?></button>
+                <?php if ($configHelper->isOptionalForRegistration()): ?>
+                    <button type="button" id="skip-verification" class="action secondary"><?= $block->escapeHtml(__('Skip Verification')) ?></button>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <input type="hidden" name="phone_verified" id="phone-verified" value="0" />
+
+    <script type="text/x-magento-init">
+    {
+        "*": {
+            "IDangerous_PhoneOtpVerification/js/phone-verification": {
+                "sendOtpUrl": "<?= $block->getUrl('phoneotp/otp/send') ?>",
+                "verifyOtpUrl": "<?= $block->getUrl('phoneotp/otp/verify') ?>",
+                "isOptional": <?= $configHelper->isOptionalForRegistration() ? 'true' : 'false' ?>
+            }
+        }
+    }
+    </script>
+<?php endif; ?>
