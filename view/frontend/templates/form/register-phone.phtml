@@ -11,20 +11,24 @@ if ($configHelper->isEnabledForRegistration()):
         <div class="control">
             <input type="text" name="phone" id="phone" value="" class="input-text"
                    data-validate="{required:<?= $configHelper->isOptionalForRegistration() ? 'false' : 'true' ?>}" />
-            <button type="button" id="send-otp" class="action secondary"><?= $block->escapeHtml(__('Send OTP')) ?></button>
             <div id="phone-verification-status"></div>
         </div>
     </div>
 
-    <div id="otp-section" style="display: none;">
-        <div class="field otp required">
-            <label for="otp-input" class="label"><span><?= $block->escapeHtml(__('Enter OTP')) ?></span></label>
-            <div class="control">
-                <input type="text" id="otp-input" class="input-text" />
-                <button type="button" id="verify-otp" class="action primary"><?= $block->escapeHtml(__('Verify OTP')) ?></button>
-                <?php if ($configHelper->isOptionalForRegistration()): ?>
-                    <button type="button" id="skip-verification" class="action secondary"><?= $block->escapeHtml(__('Skip Verification')) ?></button>
-                <?php endif; ?>
+    <div id="otp-modal" style="display: none;max-width: 400px;">
+        <div class="modal-content">
+            <div class="field otp required">
+                <label for="otp-input" class="label"><span><?= $block->escapeHtml(__('Enter OTP')) ?></span></label>
+                <div class="control">
+                    <input type="text" id="otp-input" class="input-text" />
+                    <br>
+                    <button type="button" id="verify-otp" class="action primary"><?= $block->escapeHtml(__('Verify OTP')) ?></button>
+                    <?php if ($configHelper->isOptionalForRegistration()): ?>
+                      <br>
+                        <button type="button" id="skip-verification" class="action primary"><?= $block->escapeHtml(__('Skip Verification')) ?></button>
+                    <?php endif; ?>
+                    <div id="otp-timer"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -47,7 +51,8 @@ if ($configHelper->isEnabledForRegistration()):
                     "errorSendingOtp": "<?= $block->escapeJs(__('Error sending OTP. Please try again.')) ?>",
                     "errorVerifyingOtp": "<?= $block->escapeJs(__('Error verifying OTP. Please try again.')) ?>",
                     "timeRemaining": "<?= $block->escapeJs(__('Time remaining: ')) ?>",
-                    "otpExpired": "<?= $block->escapeJs(__('OTP has expired. Please request a new one.')) ?>"
+                    "otpExpired": "<?= $block->escapeJs(__('OTP has expired. Please request a new one.')) ?>",
+                    "invalidPhone": "<?= $block->escapeJs(__('Please enter a valid phone number (minimum 10 digits).')) ?>"
                 }
             }
         }

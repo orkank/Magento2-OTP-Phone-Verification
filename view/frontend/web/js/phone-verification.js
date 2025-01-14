@@ -1,172 +1,188 @@
 define([
-    'jquery'
-], function ($) {
+    'jquery',
+    'Magento_Ui/js/modal/modal'
+], function ($, modal) {
     'use strict';
 
     return function (config) {
         const EXPIRY_TIME = 3 * 60 * 1000; // 3 minutes in milliseconds
         const texts = config.translations;
+        let formSubmitEvent = null;
 
-        function setStorageWithExpiry(key, value) {
-            const item = {
-                value: value,
-                timestamp: new Date().getTime(),
-                expiry: EXPIRY_TIME
-            };
-            localStorage.setItem(key, JSON.stringify(item));
-        }
-
-        function getStorageWithExpiry(key) {
-            const itemStr = localStorage.getItem(key);
-            if (!itemStr) return null;
-
-            const item = JSON.parse(itemStr);
-            const now = new Date().getTime();
-
-            // Check if item is expired
-            if (now - item.timestamp > item.expiry) {
-                localStorage.removeItem(key);
-                return null;
-            }
-            return item.value;
-        }
-
-        // Load saved phone from localStorage if exists (for registration only)
+        // Initialize modal for registration flow
         if (!config.isLoggedIn) {
-            var savedPhone = getStorageWithExpiry('registration_phone');
-            var savedVerified = getStorageWithExpiry('registration_phone_verified');
-
-            if (savedPhone) {
-                $('#phone').val(savedPhone);
-                if (savedVerified === '1') {
-                    $('#phone').prop('readonly', true);
-                    $('#send-otp').prop('disabled', true);
-                    $('#phone-verified').val(1);
-                    $('#phone-verification-status').text(texts.phoneVerified).addClass('verified').removeClass('not-verified');
-                }
-            }
+            const modalElement = $('#otp-modal');
+            const modalOptions = {
+                type: 'popup',
+                responsive: true,
+                innerScroll: true,
+                title: texts.enterOtp,
+                buttons: []
+            };
+            const otpModal = modal(modalOptions, modalElement);
         }
 
-        if (!config.isOptional) {
-            $('form.form-create-account').on('submit', function(e) {
-                if ($('#phone-verified').val() !== '1') {
-                    e.preventDefault();
-                    alert(texts.pleaseVerifyPhone);
+        // Logged-in user flow
+        if (config.isLoggedIn) {
+            $(document).on('click', '#send-otp', function (e) {
+                e.preventDefault();
+                var phone = $('#phone').val();
+
+                if (phone.replace(/\D/g, '').length < 10) {
+                    alert(texts.invalidPhone);
                     return false;
                 }
-                return true;
-            });
-        }
 
-        $(document).on('click', '#send-otp', function (e) {
-            e.preventDefault();
-            var phone = $('#phone').val();
-
-            // First validate phone availability (only for registration)
-            if (!config.isLoggedIn) {
                 $.ajax({
-                    url: config.validatePhoneUrl,
+                    url: config.sendOtpUrl,
                     type: 'POST',
                     dataType: 'json',
-                    data: {
-                        phone: phone
-                    },
+                    data: { phone: phone },
                     success: function(response) {
                         if (response.success) {
-                            sendOtp(phone);
+                            $('#otp-section').show();
+                            startExpiryTimer();
+                            alert(response.message);
                         } else {
                             alert(response.message);
                         }
                     },
-                    error: function(xhr, status, error) {
-                        console.error('Validate Phone Error:', error);
-                        alert(texts.errorValidating);
+                    error: function() {
+                        alert(texts.errorSendingOtp);
                     }
                 });
-            } else {
-                sendOtp(phone);
-            }
-        });
+            });
+        }
+        // Registration flow
+        else {
+            let skipVerification = false;
 
-        function sendOtp(phone) {
-            // Store phone in localStorage for registration with expiry
-            if (!config.isLoggedIn) {
-                setStorageWithExpiry('registration_phone', phone);
-            }
+            // Handle registration form submit
+            $('form.form-create-account').on('submit', function(e) {
+                const phone = $('#phone').val();
+                const isVerified = $('#phone-verified').val() === '1';
 
-            $.ajax({
-                url: config.sendOtpUrl,
-                type: 'POST',
-                dataType: 'json',
-                data: {
-                    phone: phone
-                },
-                success: function (response) {
-                    if (response.success) {
-                        $('#otp-section').show();
-                        alert(response.message);
-                    } else {
-                        alert(response.message);
-                    }
-                },
-                error: function (xhr, status, error) {
-                    console.error('Send OTP Error:', error);
-                    alert(texts.errorSendingOtp);
+                // Skip validation if skip was clicked or phone is empty
+                if (skipVerification || !phone) {
+                    return true;
                 }
+
+                // If phone is not empty and not verified
+                if (!isVerified) {
+                    e.preventDefault();
+                    formSubmitEvent = e;
+
+                    // Validate phone number
+                    if (phone.replace(/\D/g, '').length < 10) {
+                        alert(texts.invalidPhone);
+                        return false;
+                    }
+
+                    // First validate phone availability
+                    $.ajax({
+                        url: config.validatePhoneUrl,
+                        type: 'POST',
+                        dataType: 'json',
+                        data: { phone: phone },
+                        success: function(response) {
+                            if (response.success) {
+                                sendOtp(phone);
+                            } else {
+                                alert(response.message);
+                            }
+                        },
+                        error: function() {
+                            alert(texts.errorValidating);
+                        }
+                    });
+
+                    return false;
+                }
+                return true;
+            });
+
+            function sendOtp(phone) {
+                $.ajax({
+                    url: config.sendOtpUrl,
+                    type: 'POST',
+                    dataType: 'json',
+                    data: { phone: phone },
+                    success: function(response) {
+                        if (response.success) {
+                            $('#otp-modal').modal('openModal');
+                            startExpiryTimer();
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function() {
+                        alert(texts.errorSendingOtp);
+                    }
+                });
+            }
+
+            // Skip verification button (only for optional verification)
+            $(document).on('click', '#skip-verification', function() {
+                if (config.isOptional) {
+                    skipVerification = true;
+                    $('#otp-modal').modal('closeModal');
+                    if (formSubmitEvent && formSubmitEvent.target) {
+                        $(formSubmitEvent.target).submit();
+                    }
+                }
+            });
+
+            // Reset skip flag when modal is closed
+            $('#otp-modal').on('modalclosed', function() {
+                const timer = $(this).data('timer');
+                if (timer) {
+                    clearInterval(timer);
+                }
+                skipVerification = false;
             });
         }
 
-        $(document).on('click', '#verify-otp', function (e) {
-            e.preventDefault();
-            var otp = $('#otp-input').val();
+        // Common functionality for both flows
+        $(document).on('click', '#verify-otp', function() {
+            const otp = $('#otp-input').val();
 
             $.ajax({
                 url: config.verifyOtpUrl,
                 type: 'POST',
                 dataType: 'json',
-                data: {
-                    otp: otp
-                },
-                success: function (response) {
+                data: { otp: otp },
+                success: function(response) {
                     if (response.success) {
                         $('#phone-verified').val(1);
-                        $('#otp-section').hide();
                         $('#phone').prop('readonly', true);
-                        $('#send-otp').prop('disabled', true);
-                        $('#phone-verification-status').text(texts.phoneVerified).addClass('verified').removeClass('not-verified');
+                        $('#phone-verification-status')
+                            .text(texts.phoneVerified)
+                            .addClass('verified')
+                            .removeClass('not-verified');
 
-                        // Store verification status for registration with expiry
-                        if (!config.isLoggedIn) {
-                            setStorageWithExpiry('registration_phone_verified', '1');
+                        if (config.isLoggedIn) {
+                            $('#otp-section').hide();
+                        } else {
+                            $('#otp-modal').modal('closeModal');
+                            // Submit the form if it was prevented
+                            if (formSubmitEvent && formSubmitEvent.target) {
+                                $(formSubmitEvent.target).submit();
+                            }
                         }
-
-                        alert(response.message);
                     } else {
                         alert(response.message);
                     }
                 },
-                error: function (xhr, status, error) {
-                    console.error('Verify OTP Error:', error);
+                error: function() {
                     alert(texts.errorVerifyingOtp);
                 }
             });
         });
 
-        // Clear localStorage after successful registration
-        $('form.form-create-account').on('submit', function() {
-            if ($('#phone-verified').val() === '1') {
-                setTimeout(function() {
-                    localStorage.removeItem('registration_phone');
-                    localStorage.removeItem('registration_phone_verified');
-                }, 1000);
-            }
-        });
-
-        // Add a timer to show remaining time
         function startExpiryTimer() {
-            let timeLeft = EXPIRY_TIME / 1000; // Convert to seconds
-            const timerElement = $('<div id="otp-timer"></div>');
-            $('#otp-section').prepend(timerElement);
+            let timeLeft = EXPIRY_TIME / 1000;
+            const timerElement = $('#otp-timer');
+            timerElement.show();
 
             const timer = setInterval(function() {
                 timeLeft--;
@@ -177,30 +193,22 @@ define([
 
                 if (timeLeft <= 0) {
                     clearInterval(timer);
-                    $('#otp-section').hide();
+                    if (config.isLoggedIn) {
+                        $('#otp-section').hide();
+                    } else {
+                        $('#otp-modal').modal('closeModal');
+                    }
                     $('#phone').prop('readonly', false);
-                    $('#send-otp').prop('disabled', false);
                     $('#phone-verified').val(0);
-                    localStorage.removeItem('registration_phone');
-                    localStorage.removeItem('registration_phone_verified');
-                    timerElement.remove();
                     alert(texts.otpExpired);
                 }
             }, 1000);
 
-            // Store timer reference to clear it if needed
-            $('#otp-section').data('timer', timer);
-        }
-
-        // Start timer when OTP is sent
-        $(document).on('click', '#send-otp', function() {
-            // Clear existing timer if any
-            const existingTimer = $('#otp-section').data('timer');
-            if (existingTimer) {
-                clearInterval(existingTimer);
-                $('#otp-timer').remove();
+            if (config.isLoggedIn) {
+                $('#otp-section').data('timer', timer);
+            } else {
+                $('#otp-modal').data('timer', timer);
             }
-            startExpiryTimer();
-        });
+        }
     };
 });
