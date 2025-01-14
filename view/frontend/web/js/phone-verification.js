@@ -1,11 +1,11 @@
 define([
-    'jquery',
-    'mage/translate'
-], function ($, $t) {
+    'jquery'
+], function ($) {
     'use strict';
 
     return function (config) {
         const EXPIRY_TIME = 3 * 60 * 1000; // 3 minutes in milliseconds
+        const texts = config.translations;
 
         function setStorageWithExpiry(key, value) {
             const item = {
@@ -42,7 +42,7 @@ define([
                     $('#phone').prop('readonly', true);
                     $('#send-otp').prop('disabled', true);
                     $('#phone-verified').val(1);
-                    $('#phone-verification-status').text($t('Phone Verified')).addClass('verified').removeClass('not-verified');
+                    $('#phone-verification-status').text(texts.phoneVerified).addClass('verified').removeClass('not-verified');
                 }
             }
         }
@@ -51,7 +51,7 @@ define([
             $('form.form-create-account').on('submit', function(e) {
                 if ($('#phone-verified').val() !== '1') {
                     e.preventDefault();
-                    alert($t('Please verify your phone number before submitting.'));
+                    alert(texts.pleaseVerifyPhone);
                     return false;
                 }
                 return true;
@@ -80,7 +80,7 @@ define([
                     },
                     error: function(xhr, status, error) {
                         console.error('Validate Phone Error:', error);
-                        alert($t('Error validating phone number. Please try again.'));
+                        alert(texts.errorValidating);
                     }
                 });
             } else {
@@ -111,7 +111,7 @@ define([
                 },
                 error: function (xhr, status, error) {
                     console.error('Send OTP Error:', error);
-                    alert($t('Error sending OTP. Please try again.'));
+                    alert(texts.errorSendingOtp);
                 }
             });
         }
@@ -133,7 +133,7 @@ define([
                         $('#otp-section').hide();
                         $('#phone').prop('readonly', true);
                         $('#send-otp').prop('disabled', true);
-                        $('#phone-verification-status').text($t('Phone Verified')).addClass('verified').removeClass('not-verified');
+                        $('#phone-verification-status').text(texts.phoneVerified).addClass('verified').removeClass('not-verified');
 
                         // Store verification status for registration with expiry
                         if (!config.isLoggedIn) {
@@ -147,7 +147,7 @@ define([
                 },
                 error: function (xhr, status, error) {
                     console.error('Verify OTP Error:', error);
-                    alert($t('Error verifying OTP. Please try again.'));
+                    alert(texts.errorVerifyingOtp);
                 }
             });
         });
@@ -172,7 +172,7 @@ define([
                 timeLeft--;
                 const minutes = Math.floor(timeLeft / 60);
                 const seconds = timeLeft % 60;
-                timerElement.text($t('Time remaining: ') +
+                timerElement.text(texts.timeRemaining +
                     minutes + ':' + (seconds < 10 ? '0' : '') + seconds);
 
                 if (timeLeft <= 0) {
@@ -184,7 +184,7 @@ define([
                     localStorage.removeItem('registration_phone');
                     localStorage.removeItem('registration_phone_verified');
                     timerElement.remove();
-                    alert($t('OTP has expired. Please request a new one.'));
+                    alert(texts.otpExpired);
                 }
             }, 1000);
 

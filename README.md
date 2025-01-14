@@ -24,11 +24,11 @@ This module is specifically designed to work with NetGsm SMS services. It requir
 * Visual countdown timer for OTP expiration
 * Multi-language support (en_US, tr_TR)
 * Secure storage of verified phone numbers
-* Integration with NetGso SMS gateway
+* Integration with NetGsm SMS gateway
 
 ## Required Dependencies
 
-This module requires the following NetGso modules to be installed first:
+This module requires the following NetGsm modules to be installed first:
 
 ### 1. NetGsm SMS Module
 * Repository: [Netgsm-SMS-module](https://github.com/orkank/Netgsm-SMS-module)
@@ -38,7 +38,7 @@ This module requires the following NetGso modules to be installed first:
   * SMS status tracking
   * Detailed reporting
 
-### 2. NetGso IYS Module
+### 2. NetGsm IYS Module
 * Repository: [Netgsm-IYS-module](https://github.com/orkank/Netgsm-IYS-module)
 * Features:
   * IYS (İleti Yönetim Sistemi) integration
@@ -51,7 +51,7 @@ This module requires the following NetGso modules to be installed first:
 1. First, install the required NetGsm modules:
 
 ```bash
-# Install NetGso IYS Module
+# Install NetGsm IYS Module
 mkdir -p app/code/IDangerous/NetgsmIYS
 # Clone Netgsm-IYS-module from GitHub
 

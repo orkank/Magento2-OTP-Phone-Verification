@@ -39,7 +39,16 @@ if ($configHelper->isEnabledForRegistration()):
                 "verifyOtpUrl": "<?= $block->getUrl('phoneotp/otp/verify') ?>",
                 "validatePhoneUrl": "<?= $block->getUrl('phoneotp/phone/validate') ?>",
                 "isOptional": <?= $configHelper->isOptionalForRegistration() ? 'true' : 'false' ?>,
-                "isLoggedIn": false
+                "isLoggedIn": false,
+                "translations": {
+                    "phoneVerified": "<?= $block->escapeJs(__('Phone Verified')) ?>",
+                    "pleaseVerifyPhone": "<?= $block->escapeJs(__('Please verify your phone number before submitting.')) ?>",
+                    "errorValidating": "<?= $block->escapeJs(__('Error validating phone number. Please try again.')) ?>",
+                    "errorSendingOtp": "<?= $block->escapeJs(__('Error sending OTP. Please try again.')) ?>",
+                    "errorVerifyingOtp": "<?= $block->escapeJs(__('Error verifying OTP. Please try again.')) ?>",
+                    "timeRemaining": "<?= $block->escapeJs(__('Time remaining: ')) ?>",
+                    "otpExpired": "<?= $block->escapeJs(__('OTP has expired. Please request a new one.')) ?>"
+                }
             }
         }
     }
