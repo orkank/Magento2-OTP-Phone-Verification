@@ -132,4 +132,6 @@ MIT License
 
 ## Developer
 
-Your Name
+[MIT License](LICENSE.md)
+
+[Developer: Orkan Köylü](orkan.koylu@gmail.com)
