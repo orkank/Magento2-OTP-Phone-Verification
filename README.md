@@ -128,10 +128,18 @@ For technical support:
 
 ## License
 
-MIT License
+This software is licensed under a Custom License.
 
-## Developer
+### Non-Commercial Use
+- This software is free for non-commercial use
+- You may copy, distribute and modify the software as long as you track changes/dates in source files
+- Any modifications must be made available under the same license terms
 
-[MIT License](LICENSE.md)
+### Commercial Use
+- Commercial use of this software requires explicit permission from the author
+- Please contact [Orkan Köylü](orkan.koylu@gmail.com) for commercial licensing inquiries
+- Usage without proper licensing agreement is strictly prohibited
+
+Copyright (c) 2024 Orkan Köylü. All Rights Reserved.
 
 [Developer: Orkan Köylü](orkan.koylu@gmail.com)
