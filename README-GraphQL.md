@@ -56,20 +56,18 @@ mutation {
 
 ### 3. Create Customer with Phone Verification
 
-Create a customer account with phone verification support.
+Create a customer account with phone verification support using the standard `createCustomer` mutation.
 
 **Mutation:**
 ```graphql
 mutation {
-  createCustomerWithPhone(input: {
+  createCustomer(input: {
     firstname: "John"
     lastname: "Doe"
     email: "john.doe@example.com"
     password: "MyPassword123!"
     phone_number: "5551234567"
   }) {
-    success
-    message
     customer {
       id
       firstname
@@ -90,9 +88,7 @@ mutation {
 - `phone_number` (String, optional): Phone number (must be verified first if provided)
 
 **Response:**
-- `success` (Boolean): Whether customer creation was successful
-- `message` (String): Response message
-- `customer` (Object): Created customer data with phone attributes
+- `customer` (Object): Created customer data with phone attributes including `phone_number` and `phone_verified` fields
 
 ## Available Queries
 
@@ -170,7 +166,7 @@ mutation {
 }
 ```
 
-3. **Create customer account with verified phone using standard createCustomer mutation:**
+3. **Create customer account with verified phone:**
 ```graphql
 mutation {
   createCustomer(input: {
@@ -178,28 +174,21 @@ mutation {
     lastname: "Doe"
     email: "john.doe@example.com"
     password: "MyPassword123!"
-    custom_attributes: [
-      {
-        attribute_code: "phone_number"
-        value: "5551234567"
-      }
-    ]
+    phone_number: "5551234567"
   }) {
     customer {
       id
       firstname
       lastname
       email
-      custom_attributes {
-        attribute_code
-        value
-      }
+      phone_number
+      phone_verified
     }
   }
 }
 ```
 
-**Alternative (verified phone from session):**
+**Alternative (verified phone from session - no phone_number in input):**
 ```graphql
 mutation {
   createCustomer(input: {
@@ -213,10 +202,8 @@ mutation {
       firstname
       lastname
       email
-      custom_attributes {
-        attribute_code
-        value
-      }
+      phone_number
+      phone_verified
     }
   }
 }
