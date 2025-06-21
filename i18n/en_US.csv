@@ -40,3 +40,7 @@ IDangerous,IDangerous
 "Enable During Registration","Enable During Registration"
 "Optional During Registration","Optional During Registration"
 "Custom OTP Message","Custom OTP Message"
+"Sending OTP...","Sending OTP..."
+"OTP Sent","OTP Sent"
+"Verifying...","Verifying..."
+"Please enter a valid phone number (minimum 10 digits).","Please enter a valid phone number (minimum 10 digits)."

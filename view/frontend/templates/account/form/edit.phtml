@@ -101,7 +101,11 @@ $configHelper = $this->helper(\IDangerous\PhoneOtpVerification\Helper\Config::cl
                     "errorSendingOtp": "<?= $block->escapeJs(__('Error sending OTP. Please try again.')) ?>",
                     "errorVerifyingOtp": "<?= $block->escapeJs(__('Error verifying OTP. Please try again.')) ?>",
                     "timeRemaining": "<?= $block->escapeJs(__('Time remaining: ')) ?>",
-                    "otpExpired": "<?= $block->escapeJs(__('OTP has expired. Please request a new one.')) ?>"
+                    "otpExpired": "<?= $block->escapeJs(__('OTP has expired. Please request a new one.')) ?>",
+                    "sendingOtp": "<?= $block->escapeJs(__('Sending OTP...')) ?>",
+                    "otpSent": "<?= $block->escapeJs(__('OTP Sent')) ?>",
+                    "verifyingOtp": "<?= $block->escapeJs(__('Verifying...')) ?>",
+                    "sendOtp": "<?= $block->escapeJs(__('Send OTP')) ?>"
                 }
 
           }

@@ -27,11 +27,17 @@ define([
             $(document).on('click', '#send-otp', function (e) {
                 e.preventDefault();
                 var phone = $('#phone').val();
+                var $sendButton = $(this);
+                var originalText = $sendButton.text();
 
                 if (phone.replace(/\D/g, '').length < 10) {
                     alert(texts.invalidPhone);
                     return false;
                 }
+
+                // Disable button and show loading state
+                $sendButton.prop('disabled', true).text(texts.sendingOtp || 'Sending...');
+                $('#phone').prop('disabled', true);
 
                 $.ajax({
                     url: config.sendOtpUrl,
@@ -43,12 +49,20 @@ define([
                             $('#otp-section').show();
                             startExpiryTimer();
                             alert(response.message);
+                            // Keep button disabled until OTP is verified or expired
+                            $sendButton.text(texts.otpSent || 'OTP Sent');
                         } else {
                             alert(response.message);
+                            // Re-enable on error
+                            $sendButton.prop('disabled', false).text(originalText);
+                            $('#phone').prop('disabled', false);
                         }
                     },
                     error: function() {
                         alert(texts.errorSendingOtp);
+                        // Re-enable on error
+                        $sendButton.prop('disabled', false).text(originalText);
+                        $('#phone').prop('disabled', false);
                     }
                 });
             });
@@ -102,6 +116,14 @@ define([
             });
 
             function sendOtp(phone) {
+                // Disable the form during OTP sending
+                $('form.form-create-account input, form.form-create-account button').prop('disabled', true);
+
+                // Show loading state on submit button
+                var $submitButton = $('form.form-create-account button[type="submit"]');
+                var originalSubmitText = $submitButton.text();
+                $submitButton.text(texts.sendingOtp || 'Sending OTP...');
+
                 $.ajax({
                     url: config.sendOtpUrl,
                     type: 'POST',
@@ -111,12 +133,22 @@ define([
                         if (response.success) {
                             $('#otp-modal').modal('openModal');
                             startExpiryTimer();
+                            // Re-enable form except phone field
+                            $('form.form-create-account input, form.form-create-account button').prop('disabled', false);
+                            $('#phone').prop('disabled', true); // Keep phone disabled
+                            $submitButton.text(originalSubmitText);
                         } else {
                             alert(response.message);
+                            // Re-enable form on error
+                            $('form.form-create-account input, form.form-create-account button').prop('disabled', false);
+                            $submitButton.text(originalSubmitText);
                         }
                     },
                     error: function() {
                         alert(texts.errorSendingOtp);
+                        // Re-enable form on error
+                        $('form.form-create-account input, form.form-create-account button').prop('disabled', false);
+                        $submitButton.text(originalSubmitText);
                     }
                 });
             }
@@ -145,6 +177,12 @@ define([
         // Common functionality for both flows
         $(document).on('click', '#verify-otp', function() {
             const otp = $('#otp-input').val();
+            const $verifyButton = $(this);
+            const originalText = $verifyButton.text();
+
+            // Disable verify button and OTP input during verification
+            $verifyButton.prop('disabled', true).text(texts.verifyingOtp || 'Verifying...');
+            $('#otp-input').prop('disabled', true);
 
             $.ajax({
                 url: config.verifyOtpUrl,
@@ -162,6 +200,8 @@ define([
 
                         if (config.isLoggedIn) {
                             $('#otp-section').hide();
+                            // Re-enable send OTP button for logged-in users
+                            $('#send-otp').prop('disabled', false).text(texts.sendOtp || 'Send OTP');
                         } else {
                             $('#otp-modal').modal('closeModal');
                             // Submit the form if it was prevented
@@ -171,10 +211,16 @@ define([
                         }
                     } else {
                         alert(response.message);
+                        // Re-enable on error
+                        $verifyButton.prop('disabled', false).text(originalText);
+                        $('#otp-input').prop('disabled', false);
                     }
                 },
                 error: function() {
                     alert(texts.errorVerifyingOtp);
+                    // Re-enable on error
+                    $verifyButton.prop('disabled', false).text(originalText);
+                    $('#otp-input').prop('disabled', false);
                 }
             });
         });
@@ -197,10 +243,14 @@ define([
                     if ($('#phone-verified').val() !== '1') {
                         if (config.isLoggedIn) {
                             $('#otp-section').hide();
+                            // Re-enable send OTP button
+                            $('#send-otp').prop('disabled', false).text(texts.sendOtp || 'Send OTP');
                         } else {
                             $('#otp-modal').modal('closeModal');
+                            // Re-enable form elements
+                            $('form.form-create-account input, form.form-create-account button').prop('disabled', false);
                         }
-                        $('#phone').prop('readonly', false);
+                        $('#phone').prop('readonly', false).prop('disabled', false);
                         $('#phone-verified').val(0);
                         alert(texts.otpExpired);
                     }

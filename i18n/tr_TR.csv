@@ -40,3 +40,7 @@ IDangerous,IDangerous
 "Enable During Registration","Kayıt Sırasında Etkinleştir"
 "Optional During Registration","Kayıt Sırasında Opsiyonel"
 "Custom OTP Message","Özel Kod Mesajı"
+"Sending OTP...","Kod Gönderiliyor..."
+"OTP Sent","Kod Gönderildi"
+"Verifying...","Doğrulanıyor..."
+"Please enter a valid phone number (minimum 10 digits).","Lütfen geçerli bir telefon numarası giriniz (minimum 10 hane)."

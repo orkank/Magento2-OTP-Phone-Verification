@@ -52,7 +52,11 @@ if ($configHelper->isEnabledForRegistration()):
                     "errorVerifyingOtp": "<?= $block->escapeJs(__('Error verifying OTP. Please try again.')) ?>",
                     "timeRemaining": "<?= $block->escapeJs(__('Time remaining: ')) ?>",
                     "otpExpired": "<?= $block->escapeJs(__('OTP has expired. Please request a new one.')) ?>",
-                    "invalidPhone": "<?= $block->escapeJs(__('Please enter a valid phone number (minimum 10 digits).')) ?>"
+                    "invalidPhone": "<?= $block->escapeJs(__('Please enter a valid phone number (minimum 10 digits).')) ?>",
+                    "sendingOtp": "<?= $block->escapeJs(__('Sending OTP...')) ?>",
+                    "otpSent": "<?= $block->escapeJs(__('OTP Sent')) ?>",
+                    "verifyingOtp": "<?= $block->escapeJs(__('Verifying...')) ?>",
+                    "sendOtp": "<?= $block->escapeJs(__('Send OTP')) ?>"
                 }
             }
         }
