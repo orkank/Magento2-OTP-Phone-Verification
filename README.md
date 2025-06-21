@@ -18,6 +18,7 @@ This module is specifically designed to work with NetGsm SMS services. It requir
 
 * Phone number verification using OTP
 * Support for both registration and account management
+* **GraphQL API support for headless/PWA applications**
 * Automatic phone number formatting (removes +90 and leading 0)
 * Prevention of duplicate verified phone numbers
 * Session-based OTP codes with 3-minute expiry
@@ -85,6 +86,90 @@ php bin/magento cache:clean
    * Optional/Required verification
    * OTP message template
    * Phone number format settings
+
+## GraphQL API
+
+This module now includes comprehensive GraphQL API support for headless/PWA applications.
+
+### Available GraphQL Operations
+
+* **Mutations:**
+  * `sendPhoneOtp` - Send OTP to phone number
+  * `verifyPhoneOtp` - Verify OTP code
+
+* **Queries:**
+  * `phoneOtpStatus` - Get current OTP verification status
+
+### Usage Examples
+
+**Send OTP:**
+```graphql
+mutation {
+  sendPhoneOtp(input: {
+    phone_number: "5551234567"
+  }) {
+    success
+    message
+  }
+}
+```
+
+**Verify OTP:**
+```graphql
+mutation {
+  verifyPhoneOtp(input: {
+    otp_code: "123456"
+  }) {
+    success
+    message
+    phone_verified
+    customer_updated
+  }
+}
+```
+
+**Create Customer with Verified Phone:**
+```graphql
+mutation {
+  createCustomer(input: {
+    firstname: "John"
+    lastname: "Doe"
+    email: "john@example.com"
+    password: "Pass123!"
+    custom_attributes: [
+      {
+        attribute_code: "phone_number"
+        value: "5551234567"
+      }
+    ]
+  }) {
+    customer {
+      id
+      firstname
+      lastname
+      email
+      custom_attributes {
+        attribute_code
+        value
+      }
+    }
+  }
+}
+```
+
+**Check OTP Status:**
+```graphql
+query {
+  phoneOtpStatus {
+    has_pending_otp
+    phone_number
+    time_remaining
+    is_expired
+  }
+}
+```
+
+For detailed GraphQL API documentation, see [README-GraphQL.md](README-GraphQL.md).
 
 ## Features
 

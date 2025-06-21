@@ -193,14 +193,17 @@ define([
 
                 if (timeLeft <= 0) {
                     clearInterval(timer);
-                    if (config.isLoggedIn) {
-                        $('#otp-section').hide();
-                    } else {
-                        $('#otp-modal').modal('closeModal');
+                    // Only reset verification if phone is not already verified
+                    if ($('#phone-verified').val() !== '1') {
+                        if (config.isLoggedIn) {
+                            $('#otp-section').hide();
+                        } else {
+                            $('#otp-modal').modal('closeModal');
+                        }
+                        $('#phone').prop('readonly', false);
+                        $('#phone-verified').val(0);
+                        alert(texts.otpExpired);
                     }
-                    $('#phone').prop('readonly', false);
-                    $('#phone-verified').val(0);
-                    alert(texts.otpExpired);
                 }
             }, 1000);
 

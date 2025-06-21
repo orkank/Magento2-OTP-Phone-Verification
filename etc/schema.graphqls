@@ -1,0 +1,44 @@
+type Mutation {
+    sendPhoneOtp(input: SendPhoneOtpInput!): SendPhoneOtpOutput @resolver(class: "IDangerous\\PhoneOtpVerification\\Model\\Resolver\\SendPhoneOtp")
+    verifyPhoneOtp(input: VerifyPhoneOtpInput!): VerifyPhoneOtpOutput @resolver(class: "IDangerous\\PhoneOtpVerification\\Model\\Resolver\\VerifyPhoneOtp")
+}
+
+type Query {
+    phoneOtpStatus: PhoneOtpStatusOutput @resolver(class: "IDangerous\\PhoneOtpVerification\\Model\\Resolver\\PhoneOtpStatus")
+}
+
+extend input CustomerInput {
+    phone_number: String
+}
+
+extend type Customer {
+    phone_number: String @resolver(class: "IDangerous\\PhoneOtpVerification\\Model\\Resolver\\Customer\\PhoneNumber")
+    phone_verified: Boolean @resolver(class: "IDangerous\\PhoneOtpVerification\\Model\\Resolver\\Customer\\PhoneVerified")
+}
+
+input SendPhoneOtpInput {
+    phone_number: String!
+}
+
+input VerifyPhoneOtpInput {
+    otp_code: String!
+}
+
+type SendPhoneOtpOutput {
+    success: Boolean!
+    message: String!
+}
+
+type VerifyPhoneOtpOutput {
+    success: Boolean!
+    message: String!
+    phone_verified: Boolean
+    customer_updated: Boolean
+}
+
+type PhoneOtpStatusOutput {
+    has_pending_otp: Boolean!
+    phone_number: String
+    time_remaining: Int
+    is_expired: Boolean!
+}

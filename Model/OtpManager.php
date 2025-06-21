@@ -6,6 +6,7 @@ use Magento\Customer\Model\Session;
 use Magento\Framework\Exception\LocalizedException;
 use IDangerous\Sms\Model\Api\SmsService;
 use Magento\Customer\Model\ResourceModel\Customer\CollectionFactory;
+use Magento\Framework\App\CacheInterface;
 
 class OtpManager
 {
@@ -25,18 +26,26 @@ class OtpManager
     protected $customerCollectionFactory;
 
     /**
+     * @var CacheInterface
+     */
+    protected $cache;
+
+    /**
      * @param SmsService $smsService
      * @param Session $session
      * @param CollectionFactory $customerCollectionFactory
+     * @param CacheInterface $cache
      */
     public function __construct(
         SmsService $smsService,
         Session $session,
-        CollectionFactory $customerCollectionFactory
+        CollectionFactory $customerCollectionFactory,
+        CacheInterface $cache
     ) {
         $this->smsService = $smsService;
         $this->session = $session;
         $this->customerCollectionFactory = $customerCollectionFactory;
+        $this->cache = $cache;
     }
 
     protected function isPhoneAvailable($phone)
@@ -72,12 +81,25 @@ class OtpManager
             $otp = $this->generateOtp();
             $message = "Your verification code is: " . $otp;
 
-            // Store both OTP and phone number in session
-            $this->session->setPhoneOtp([
+            $otpData = [
                 'code' => $otp,
                 'phone' => $phone,
                 'timestamp' => time()
-            ]);
+            ];
+
+                        // Store in session (for web context)
+            $this->session->setPhoneOtp($otpData);
+
+            // Also store in cache (for GraphQL context) - use multiple cache keys for better lookup
+            $phoneKey = 'phone_otp_' . md5($phone);
+            $otpKey = 'otp_code_' . $otp; // Direct OTP lookup
+
+            $this->cache->save(json_encode($otpData), $phoneKey, [], 300); // 5 minutes expiry
+            $this->cache->save(json_encode($otpData), $otpKey, [], 300); // 5 minutes expiry
+
+            // Debug logging
+            error_log('OtpManager::sendOtp - Storing OTP data: ' . json_encode($otpData));
+            error_log('OtpManager::sendOtp - Cache keys: ' . $phoneKey . ', ' . $otpKey);
 
             $result = $this->smsService->sendOtpSms($phone, $message);
 
@@ -93,15 +115,44 @@ class OtpManager
 
     public function verifyOtp($inputOtp)
     {
+        // First try session storage
         $otpData = $this->session->getPhoneOtp();
 
+        // If no session data, try direct OTP cache lookup
         if (!$otpData || !isset($otpData['code']) || !isset($otpData['phone'])) {
+            $otpKey = 'otp_code_' . $inputOtp;
+            $cachedData = $this->cache->load($otpKey);
+            if ($cachedData) {
+                $otpData = json_decode($cachedData, true);
+                error_log('OtpManager::verifyOtp - Found OTP data in cache: ' . $cachedData);
+            }
+        }
+
+        // Debug logging
+        error_log('OtpManager::verifyOtp - Session data: ' . json_encode($otpData));
+        error_log('OtpManager::verifyOtp - Input OTP: ' . $inputOtp);
+
+        if (!$otpData || !isset($otpData['code']) || !isset($otpData['phone'])) {
+            error_log('OtpManager::verifyOtp - No OTP data found in session or cache');
             return false;
         }
 
         // Check if OTP is expired (5 minutes validity)
-        if (time() - $otpData['timestamp'] > 300) {
+        $timestamp = $otpData['timestamp'] ?? 0;
+        $currentTime = time();
+        $timeElapsed = $currentTime - $timestamp;
+        error_log('OtpManager::verifyOtp - Time elapsed: ' . $timeElapsed . ' seconds');
+
+        if ($timeElapsed > 300) {
+            error_log('OtpManager::verifyOtp - OTP expired');
             $this->session->unsPhoneOtp();
+            // Also clean cache
+            if (isset($otpData['phone']) && isset($otpData['code'])) {
+                $phoneKey = 'phone_otp_' . md5($otpData['phone']);
+                $otpKey = 'otp_code_' . $otpData['code'];
+                $this->cache->remove($phoneKey);
+                $this->cache->remove($otpKey);
+            }
             return false;
         }
 
@@ -109,14 +160,24 @@ class OtpManager
         $storedOtp = trim((string)$otpData['code']);
         $inputOtp = trim((string)$inputOtp);
 
+        error_log('OtpManager::verifyOtp - Stored OTP: ' . $storedOtp . ' vs Input OTP: ' . $inputOtp);
+
         if ($storedOtp === $inputOtp) {
-            // Keep the OTP data in session until verification is complete
-            // It will be used by the Verify controller to get the phone number
+            error_log('OtpManager::verifyOtp - OTP match successful');
+
+            // Store in session for further processing
+            if (!$this->session->getPhoneOtp()) {
+                $this->session->setPhoneOtp($otpData);
+            }
+
             return true;
         }
 
+        error_log('OtpManager::verifyOtp - OTP match failed');
         return false;
     }
+
+
 
     protected function generateOtp()
     {
