@@ -10,4 +10,14 @@
     <type name="Magento\Customer\Model\AccountManagement">
         <plugin name="save_phone_number" type="IDangerous\PhoneOtpVerification\Plugin\Customer\Model\AccountManagementPlugin" />
     </type>
+
+    <!-- GraphQL Customer Creation Plugin -->
+    <type name="Magento\CustomerGraphQl\Model\Customer\CreateCustomerAccount">
+        <plugin name="phone_verification_create_customer" type="IDangerous\PhoneOtpVerification\Plugin\GraphQl\CreateCustomerPlugin" />
+    </type>
+
+    <!-- Fallback Plugin for Customer Repository -->
+    <type name="Magento\Customer\Api\CustomerRepositoryInterface">
+        <plugin name="phone_verification_customer_save" type="IDangerous\PhoneOtpVerification\Plugin\GraphQl\CreateCustomerV2Plugin" />
+    </type>
 </config>

@@ -82,27 +82,47 @@ class CreateCustomerPlugin
             $this->logger->info('GraphQL CreateCustomer: Normalized phone: ' . $normalizedPhoneNumber);
             $this->logger->info('GraphQL CreateCustomer: Verified phone in session: ' . ($verifiedPhone ?: 'none'));
 
-            // If no verified phone in session, check cache
+            // Check phone verification with multiple methods
             $phoneVerified = false;
+
+            // Method 1: Check session
             if ($verifiedPhone && $this->normalizePhoneNumber($verifiedPhone) === $normalizedPhoneNumber) {
                 $phoneVerified = true;
                 $this->logger->info('GraphQL CreateCustomer: Phone verified via session');
-            } else {
-                // Check cache for verification
-                $cacheKey = 'verified_phone_' . md5($normalizedPhoneNumber);
-                $cachedData = $this->cache->load($cacheKey);
+            }
+
+            // Method 2: Check cache with original phone number
+            if (!$phoneVerified) {
+                $cacheKey1 = 'verified_phone_' . md5($phoneNumber);
+                $cachedData = $this->cache->load($cacheKey1);
                 if ($cachedData) {
                     $verificationData = json_decode($cachedData, true);
                     if (isset($verificationData['verified']) && $verificationData['verified'] &&
                         isset($verificationData['timestamp']) && (time() - $verificationData['timestamp']) < 600) {
                         $phoneVerified = true;
-                        $this->logger->info('GraphQL CreateCustomer: Phone verified via cache');
+                        $this->logger->info('GraphQL CreateCustomer: Phone verified via cache (original): ' . $cacheKey1);
+                    }
+                }
+            }
+
+            // Method 3: Check cache with normalized phone number
+            if (!$phoneVerified) {
+                $cacheKey2 = 'verified_phone_' . md5($normalizedPhoneNumber);
+                $cachedData = $this->cache->load($cacheKey2);
+                if ($cachedData) {
+                    $verificationData = json_decode($cachedData, true);
+                    if (isset($verificationData['verified']) && $verificationData['verified'] &&
+                        isset($verificationData['timestamp']) && (time() - $verificationData['timestamp']) < 600) {
+                        $phoneVerified = true;
+                        $this->logger->info('GraphQL CreateCustomer: Phone verified via cache (normalized): ' . $cacheKey2);
                     }
                 }
             }
 
             if (!$phoneVerified) {
-                $this->logger->info('GraphQL CreateCustomer: Phone verification failed - not found in session or cache');
+                $this->logger->error('GraphQL CreateCustomer: Phone verification failed - not found in session or cache');
+                $this->logger->error('GraphQL CreateCustomer: Checked session: ' . ($verifiedPhone ?: 'none'));
+                $this->logger->error('GraphQL CreateCustomer: Checked cache keys: verified_phone_' . md5($phoneNumber) . ', verified_phone_' . md5($normalizedPhoneNumber));
                 throw new GraphQlInputException(
                     __('Phone number must be verified before registration. Please send and verify OTP first.')
                 );
@@ -111,6 +131,9 @@ class CreateCustomerPlugin
             // Ensure phone attributes are set correctly
             $customerData['phone_number'] = $phoneNumber;
             $customerData['phone_verified'] = 1;
+
+            $this->logger->info('GraphQL CreateCustomer: Setting phone_number: ' . $phoneNumber);
+            $this->logger->info('GraphQL CreateCustomer: Setting phone_verified: 1');
 
             // Also add to custom_attributes if not already there
             if (!isset($customerData['custom_attributes'])) {
@@ -123,6 +146,7 @@ class CreateCustomerPlugin
                 if (isset($attribute['attribute_code']) && $attribute['attribute_code'] === 'phone_number') {
                     $attribute['value'] = $phoneNumber;
                     $phoneAttrExists = true;
+                    $this->logger->info('GraphQL CreateCustomer: Updated existing phone_number custom attribute');
                     break;
                 }
             }
@@ -131,6 +155,7 @@ class CreateCustomerPlugin
                     'attribute_code' => 'phone_number',
                     'value' => $phoneNumber
                 ];
+                $this->logger->info('GraphQL CreateCustomer: Added new phone_number custom attribute');
             }
 
             // Add phone_verified custom attribute
@@ -139,6 +164,7 @@ class CreateCustomerPlugin
                 if (isset($attribute['attribute_code']) && $attribute['attribute_code'] === 'phone_verified') {
                     $attribute['value'] = 1;
                     $verifiedAttrExists = true;
+                    $this->logger->info('GraphQL CreateCustomer: Updated existing phone_verified custom attribute to 1');
                     break;
                 }
             }
@@ -147,9 +173,11 @@ class CreateCustomerPlugin
                     'attribute_code' => 'phone_verified',
                     'value' => 1
                 ];
+                $this->logger->info('GraphQL CreateCustomer: Added new phone_verified custom attribute set to 1');
             }
 
             $this->logger->info('GraphQL CreateCustomer: Phone verification validated for registration');
+            $this->logger->info('GraphQL CreateCustomer: Final customer data: ' . json_encode($customerData));
         } else {
             // Check if we have a verified phone in session (for cases where phone_number isn't passed)
             $verifiedPhone = $this->customerSession->getRegistrationVerifiedPhone();
