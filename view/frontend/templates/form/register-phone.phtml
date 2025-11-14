@@ -37,7 +37,7 @@ if ($configHelper->isEnabledForRegistration()):
 
     <script type="text/x-magento-init">
     {
-        "*": {
+        "form.form-create-account, form#form-validate": {
             "IDangerous_PhoneOtpVerification/js/phone-verification": {
                 "sendOtpUrl": "<?= $block->getUrl('phoneotp/otp/send') ?>",
                 "verifyOtpUrl": "<?= $block->getUrl('phoneotp/otp/verify') ?>",
