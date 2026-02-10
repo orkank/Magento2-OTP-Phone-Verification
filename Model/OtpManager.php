@@ -7,6 +7,7 @@ use Magento\Framework\Exception\LocalizedException;
 use IDangerous\Sms\Model\Api\SmsService;
 use Magento\Customer\Model\ResourceModel\Customer\CollectionFactory;
 use Magento\Framework\App\CacheInterface;
+use IDangerous\PhoneOtpVerification\Helper\Config;
 
 class OtpManager
 {
@@ -31,21 +32,29 @@ class OtpManager
     protected $cache;
 
     /**
+     * @var Config
+     */
+    protected $configHelper;
+
+    /**
      * @param SmsService $smsService
      * @param Session $session
      * @param CollectionFactory $customerCollectionFactory
      * @param CacheInterface $cache
+     * @param Config $configHelper
      */
     public function __construct(
         SmsService $smsService,
         Session $session,
         CollectionFactory $customerCollectionFactory,
-        CacheInterface $cache
+        CacheInterface $cache,
+        Config $configHelper
     ) {
         $this->smsService = $smsService;
         $this->session = $session;
         $this->customerCollectionFactory = $customerCollectionFactory;
         $this->cache = $cache;
+        $this->configHelper = $configHelper;
     }
 
     protected function isPhoneAvailable($phone)
@@ -68,18 +77,21 @@ class OtpManager
         return $collection->getSize() === 0;
     }
 
-    public function sendOtp($phone)
+    public function sendOtp($phone, bool $skipAvailabilityCheck = false)
     {
         try {
             // Check if phone is available (only for non-logged in users or different number)
-            if (!$this->isPhoneAvailable($phone)) {
+            if (!$skipAvailabilityCheck && !$this->isPhoneAvailable($phone)) {
                 throw new LocalizedException(
                     __('This phone number is already registered and verified by another user.')
                 );
             }
 
             $otp = $this->generateOtp();
-            $message = "Your verification code is: " . $otp;
+            // Get message template from admin panel configuration
+            $messageTemplate = $this->configHelper->getOtpMessage();
+            // Replace {otp} placeholder with actual OTP code
+            $message = str_replace('{otp}', $otp, $messageTemplate);
 
             $otpData = [
                 'code' => $otp,

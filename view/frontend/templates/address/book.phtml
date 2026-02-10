@@ -1,0 +1,89 @@
+<?php
+/**
+ * Default billing/shipping block on /customer/address/index/
+ *
+ * @var \Magento\Customer\Block\Address\Book $block
+ * @var \IDangerous\PhoneOtpVerification\ViewModel\AddressPhoneVerification $viewModel
+ */
+$viewModel = $block->getData('view_model');
+?>
+
+<div class="block block-addresses-default">
+    <div class="block-title"><strong><?= $block->escapeHtml(__('Default Addresses')) ?></strong></div>
+    <div class="block-content">
+        <?php if ($_billingId = $block->getDefaultBilling()) : ?>
+            <?php $billingAddress = $block->getAddressById($_billingId); ?>
+            <?php
+            $billingVerified = false;
+            if ($viewModel && $billingAddress && $billingAddress->getId()) {
+                $billingVerified = $viewModel->isAddressPhoneVerified((int)$billingAddress->getId());
+            }
+            ?>
+            <div class="box box-address-billing">
+                <strong class="box-title">
+                    <span><?= $block->escapeHtml(__('Default Billing Address')) ?></span>
+                </strong>
+                <div class="box-content">
+                    <address>
+                        <?= $block->getAddressHtml($billingAddress) ?>
+                        <?php if ($billingAddress && $billingAddress->getTelephone() && $billingVerified): ?>
+                            <div class="phone-verified-badge" style="color: green; margin-top: 6px;" title="<?= $block->escapeHtmlAttr(__('Phone Verified')) ?>">
+                                ✓ <?= $block->escapeHtml(__('Verified')) ?>
+                            </div>
+                        <?php endif; ?>
+                    </address>
+                </div>
+                <div class="box-actions">
+                    <a class="action edit" href="<?= $block->escapeUrl($block->getAddressEditUrl($_billingId)) ?>">
+                        <span><?= $block->escapeHtml(__('Change Billing Address')) ?></span>
+                    </a>
+                </div>
+            </div>
+        <?php else : ?>
+            <div class="box box-billing-address">
+                <strong class="box-title"><span><?= $block->escapeHtml(__('Default Billing Address')) ?></span></strong>
+                <div class="box-content">
+                    <p><?= $block->escapeHtml(__('You have no default billing address in your address book.')) ?></p>
+                </div>
+            </div>
+        <?php endif ?>
+
+        <?php if ($_shippingId = $block->getDefaultShipping()) : ?>
+            <?php $shippingAddress = $block->getAddressById($_shippingId); ?>
+            <?php
+            $shippingVerified = false;
+            if ($viewModel && $shippingAddress && $shippingAddress->getId()) {
+                $shippingVerified = $viewModel->isAddressPhoneVerified((int)$shippingAddress->getId());
+            }
+            ?>
+            <div class="box box-address-shipping">
+                <strong class="box-title">
+                    <span><?= $block->escapeHtml(__('Default Shipping Address')) ?></span>
+                </strong>
+                <div class="box-content">
+                    <address>
+                        <?= $block->getAddressHtml($shippingAddress) ?>
+                        <?php if ($shippingAddress && $shippingAddress->getTelephone() && $shippingVerified): ?>
+                            <div class="phone-verified-badge" style="color: green; margin-top: 6px;" title="<?= $block->escapeHtmlAttr(__('Phone Verified')) ?>">
+                                ✓ <?= $block->escapeHtml(__('Verified')) ?>
+                            </div>
+                        <?php endif; ?>
+                    </address>
+                </div>
+                <div class="box-actions">
+                    <a class="action edit" href="<?= $block->escapeUrl($block->getAddressEditUrl($_shippingId)) ?>">
+                        <span><?= $block->escapeHtml(__('Change Shipping Address')) ?></span>
+                    </a>
+                </div>
+            </div>
+        <?php else : ?>
+            <div class="box box-shipping-address">
+                <strong class="box-title"><span><?= $block->escapeHtml(__('Default Shipping Address')) ?></span></strong>
+                <div class="box-content">
+                    <p><?= $block->escapeHtml(__('You have no default shipping address in your address book.')) ?></p>
+                </div>
+            </div>
+        <?php endif ?>
+    </div>
+</div>
+

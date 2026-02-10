@@ -67,11 +67,11 @@ define([
                         if (response.message) {
                             alert(response.message);
                         } else {
-                            alert(texts.errorSendingOtp || 'An error occurred. Please try again.');
+                            alert(texts.errorSendingOtp || texts.errorOccurred || 'An error occurred. Please try again.');
                         }
                     } catch (e) {
                         // If can't parse, show generic error
-                        alert(texts.errorSendingOtp || 'An error occurred. Please try again.');
+                        alert(texts.errorSendingOtp || texts.errorOccurred || 'An error occurred. Please try again.');
                     }
                     // Re-enable form
                     $form.find('input, button').prop('disabled', false);
@@ -108,7 +108,7 @@ define([
                 }
 
                 // Disable button and show loading state
-                $sendButton.prop('disabled', true).text(texts.sendingOtp || 'Sending...');
+                $sendButton.prop('disabled', true).text(texts.sendingOtp || texts.sending || 'Sending...');
                 $('#phone').prop('disabled', true);
 
                 $.ajax({
@@ -352,7 +352,7 @@ define([
                 // Show loading state on submit button
                 var $submitButton = $form.find('button[type="submit"]');
                 var originalSubmitText = $submitButton.text();
-                $submitButton.text(texts.sendingOtp || 'Sending OTP...');
+                $submitButton.text(texts.sendingOtp || texts.sending || 'Sending OTP...');
 
                 $.ajax({
                     url: config.sendOtpUrl,

@@ -1,0 +1,69 @@
+<?php
+/**
+ * @var \IDangerous\PhoneOtpVerification\Block\Address\PhoneVerification $block
+ */
+$config = $block->getConfig();
+?>
+<?php if ($config['enabled']): ?>
+<!-- OTP Modal for Address Phone Verification -->
+<div id="address-otp-modal" style="display:none;">
+    <div class="idg-otp-modal">
+        <p class="idg-otp-modal__desc idg-otp-modal__desc--info">
+            <?= $block->escapeHtml(__('Phone number verification is required for this address.')) ?>
+        </p>
+
+        <div class="idg-otp-modal__error" id="address-otp-error" style="display:none;"></div>
+
+        <div class="idg-otp-modal__grid">
+            <div class="idg-otp-modal__field">
+                <label class="label" for="address-modal-phone">
+                    <span><?= $block->escapeHtml(__('Phone Number')) ?></span>
+                </label>
+                <div class="control">
+                    <input type="text" id="address-modal-phone" class="input-text" readonly />
+                </div>
+            </div>
+
+            <div class="idg-otp-modal__field">
+                <label class="label" for="address-otp-input">
+                    <span><?= $block->escapeHtml(__('Enter OTP Code')) ?></span>
+                </label>
+                <div class="control">
+                    <input type="text"
+                           id="address-otp-input"
+                           class="input-text"
+                           placeholder="<?= $block->escapeHtmlAttr(__('Enter 6-digit OTP code')) ?>"
+                           maxlength="6" />
+                    <div id="address-otp-timer" class="idg-otp-modal__timer" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="idg-otp-modal__actions">
+            <button type="button" id="address-send-otp" class="action primary">
+                <span><?= $block->escapeHtml(__('Send OTP')) ?></span>
+            </button>
+            <button type="button" id="address-verify-otp" class="action primary" style="display:none;">
+                <span><?= $block->escapeHtml(__('Verify OTP')) ?></span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<input type="hidden" id="address-phone-verified" name="address_phone_verified" value="0"/>
+<input type="hidden" id="address-phone-number" name="address_phone_number" value=""/>
+
+<script type="text/x-magento-init">
+{
+    "#form-validate": {
+        "IDangerous_PhoneOtpVerification/js/address-phone-verification": {
+            "sendOtpUrl": "<?= $block->escapeUrl($config['sendOtpUrl']) ?>",
+            "verifyOtpUrl": "<?= $block->escapeUrl($config['verifyOtpUrl']) ?>",
+            "customerPhoneNumber": "<?= $block->escapeJs($config['customerPhoneNumber'] ?? '') ?>",
+            "customerPhoneVerified": <?= (int)($config['customerPhoneVerified'] ?? 0) ?>,
+            "translations": <?= json_encode($config['translations']) ?>
+        }
+    }
+}
+</script>
+<?php endif; ?>

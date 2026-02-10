@@ -18,14 +18,16 @@ This module is specifically designed to work with NetGsm SMS services. It requir
 
 * Phone number verification using OTP
 * Support for both registration and account management
+* **Address phone verification (My Account Address Book + Checkout)**
 * **GraphQL API support for headless/PWA applications**
 * Automatic phone number formatting (removes +90 and leading 0)
-* Prevention of duplicate verified phone numbers
+* Prevention of duplicate verified phone numbers (registration/account flows)
 * Session-based OTP codes with 3-minute expiry
 * Visual countdown timer for OTP expiration
 * Multi-language support (en_US, tr_TR)
 * Secure storage of verified phone numbers
 * Integration with NetGsm SMS gateway
+* Verification indicator ("Verified / Telefon Doğrulandı") on address views (Address Book, Dashboard, Checkout)
 
 ## Required Dependencies
 
@@ -87,6 +89,50 @@ php bin/magento cache:clean
    * OTP message template
    * Phone number format settings
 
+3. Address phone verification settings:
+   * Admin > Stores > Configuration > IDangerous > Phone OTP Verification > Address
+     * **Require Phone Verification for New Addresses**
+     * **Require Verification for Unverified Existing Addresses**
+
+## Address Phone Verification (My Account + Checkout)
+
+When enabled, customers must verify phone numbers used on addresses (if telephone is present):
+
+* **My Account > Address Book**:
+  * On Save, if verification is required, the form submission is paused and an OTP modal opens.
+  * OTP is **auto-sent** when the modal opens.
+  * After successful verification, the address is saved and marked as verified.
+* **Checkout**:
+  * If the selected shipping/billing address has an unverified phone, an OTP modal opens automatically.
+  * After successful verification, the checkout request is retried and the user can continue.
+
+**Important rules:**
+* If the address telephone matches the customer's already verified profile phone (`customer_entity.phone_number` and `customer_entity.phone_verified=1`), no additional verification is required.
+* Existing addresses created before enabling this feature are supported; unverified ones can be forced to verify via config.
+* Address telephone numbers may be used by multiple customers; the "phone already used by another verified customer" restriction is bypassed for **address/checkout** OTP sends.
+
+## Database / Storage
+
+Customer profile phone verification uses:
+* `customer_entity.phone_number`
+* `customer_entity.phone_verified`
+
+Address phone verification status is stored in a separate table to avoid Quote/Checkout interface conflicts:
+* `idangerous_address_phone_verification`
+  * `address_id` (PK)
+  * `is_verified`
+  * `verified_at`
+  * `verified_ip`
+
+## Proxy / Cloudflare real IP
+
+If your store is behind Cloudflare or a reverse proxy, the module is configured to prefer real client IP headers when storing `verified_ip`:
+* `CF-Connecting-IP` (`HTTP_CF_CONNECTING_IP`)
+* `X-Forwarded-For` (`HTTP_X_FORWARDED_FOR`)
+* `X-Real-IP` (`HTTP_X_REAL_IP`)
+
+For security, ensure your origin is not directly reachable from the public internet (only via your proxy/CDN), otherwise these headers can be spoofed.
+
 ## GraphQL API
 
 This module now includes comprehensive GraphQL API support for headless/PWA applications.
@@ -96,9 +142,35 @@ This module now includes comprehensive GraphQL API support for headless/PWA appl
 * **Mutations:**
   * `sendPhoneOtp` - Send OTP to phone number
   * `verifyPhoneOtp` - Verify OTP code
+  * `sendAddressPhoneOtp` - Send OTP for address/checkout verification (skips duplicate-phone restriction)
+  * `verifyAddressPhoneOtp` - Verify OTP and receive `verification_token` to bridge to REST/GraphQL address save
 
 * **Queries:**
   * `phoneOtpStatus` - Get current OTP verification status
+
+### Mobile App Integration (GraphQL Address Book + REST Checkout)
+
+This module supports apps that use **GraphQL for address book** and **REST for checkout**.
+
+**Key points:**
+* Address verification is **per phone** and stored on addresses separately (`idangerous_address_phone_verification`).
+* If the phone matches the customer's already verified profile phone (`customer_entity.phone_number` + `phone_verified=1`), verification is not required.
+* If checkout REST payload does not include `customer_address_id`, the backend will skip verification when the customer already has **any verified address with the same phone**.
+* To bridge stateless OTP verification to REST checkout, use `X-Phone-Verification-Token` header (short-lived token).
+
+#### App flow: verify then retry with token
+
+1) When backend requires verification (address save or `/V1/carts/mine/shipping-information` fails with our \"verification required\" message):\n
+- GraphQL: `sendAddressPhoneOtp(phone_number)`\n
+- User enters OTP\n
+- GraphQL: `verifyAddressPhoneOtp(otp_code)` → returns `verification_token` + `expires_in`\n
+\n
+2) Retry the original request with header:\n
+- `X-Phone-Verification-Token: <verification_token>`\n
+\n
+**Where to send the header:**\n
+- GraphQL address create/update mutation request\n
+- REST checkout shipping-information request\n
 
 ### Usage Examples
 
@@ -184,6 +256,12 @@ For detailed GraphQL API documentation, see [README-GraphQL.md](README-GraphQL.m
 * Phone verification for existing customers
 * Update phone number with verification
 * Maintain verification status
+
+### Address Book & Checkout (Address Phone Verification)
+* Address phone verification during address create/edit (modal-based flow)
+* Checkout auto modal + auto OTP send for unverified selected addresses
+* No re-verification if address phone matches customer's already verified profile phone
+* Address verification status stored with `verified_at` and `verified_ip`
 
 ### Security Features
 * Session-based OTP storage

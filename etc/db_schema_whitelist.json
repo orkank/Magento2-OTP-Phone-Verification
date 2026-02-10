@@ -1,0 +1,28 @@
+{
+    "customer_entity": {
+        "column": {
+            "phone_number": true,
+            "phone_verified": true
+        }
+    },
+    "customer_address_entity": {
+        "column": {
+            "phone_verified": true
+        }
+    },
+    "idangerous_address_phone_verification": {
+        "column": {
+            "address_id": true,
+            "is_verified": true,
+            "verified_at": true
+            ,"verified_ip": true
+        },
+        "index": {
+            "IDANGEROUS_ADDRESS_PHONE_VERIFICATION_IS_VERIFIED": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "FK_D2E41450CA755142783AD4721F95CD43": true
+        }
+    }
+}

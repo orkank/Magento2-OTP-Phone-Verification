@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:DataObject/etc/fieldset.xsd">
+    <!-- Prevent phone fields from being copied to quote -->
+    <scope id="global">
+        <fieldset id="customer_account">
+            <field name="phone_verified">
+                <aspect name="to_quote" ignore="true"/>
+            </field>
+            <field name="phone_number">
+                <aspect name="to_quote" ignore="true"/>
+            </field>
+        </fieldset>
+    </scope>
+</config>

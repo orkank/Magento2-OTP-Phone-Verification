@@ -43,9 +43,62 @@ class Verify extends Action
                 // Get the verified phone data from session
                 $otpData = $this->session->getPhoneOtp();
                 $phone = $otpData['phone'] ?? '';
+                $requestPhone = $this->getRequest()->getParam('phone');
+                $addressType = (string)$this->getRequest()->getParam('address_type'); // shipping|billing (optional)
+                $customerAddressId = (int)$this->getRequest()->getParam('customer_address_id');
+
+                // Use phone from request if provided (for address verification)
+                if ($requestPhone) {
+                    $phone = $requestPhone;
+                }
 
                 if (!$phone) {
                     throw new \Exception(__('Phone number not found in session.'));
+                }
+
+                // Check if this is for address verification
+                $addressPhoneVerified = $this->getRequest()->getParam('address_phone_verified');
+                if ($addressPhoneVerified) {
+                    // Store in session for address verification
+                    // Normalize phone number for consistent hashing
+                    $normalizedPhone = preg_replace('/[^0-9]/', '', $phone);
+                    
+                    // Use phone number hash as key for new addresses (both normalized and original)
+                    $sessionKey = 'new_address_phone_verified_' . md5($normalizedPhone);
+                    $sessionKeyOriginal = 'new_address_phone_verified_' . md5($phone);
+                    $this->session->setData($sessionKey, true);
+                    $this->session->setData($sessionKeyOriginal, true);
+                    
+                    // Also set for checkout (both shipping and billing)
+                    if ($addressType === 'shipping' || $addressType === 'billing') {
+                        $checkoutKey = 'checkout_' . $addressType . '_phone_verified_' . md5($normalizedPhone);
+                        $this->session->setData($checkoutKey, true);
+                    } else {
+                        $checkoutShippingKey = 'checkout_shipping_phone_verified_' . md5($normalizedPhone);
+                        $checkoutBillingKey = 'checkout_billing_phone_verified_' . md5($normalizedPhone);
+                        $this->session->setData($checkoutShippingKey, true);
+                        $this->session->setData($checkoutBillingKey, true);
+                    }
+
+                    // If this verification belongs to an existing customer address (checkout address selection),
+                    // store by address_id so ShippingInformationManagementPlugin::validateExistingAddress() can pass.
+                    if ($customerAddressId > 0) {
+                        $sessionKeyById = 'address_phone_verified_' . $customerAddressId;
+                        $this->session->setData($sessionKeyById, true);
+
+                        // Persist verified status for this address (only if logged in and owns the address)
+                        if ($this->session->isLoggedIn()) {
+                            $this->customerHelper->saveVerifiedAddressPhone($customerAddressId, $phone);
+                        }
+                    }
+                    
+                    // Store phone in session for address form
+                    $this->session->setData('address_verified_phone', $phone);
+                    
+                    return $result->setData([
+                        'success' => true,
+                        'message' => __('Phone number verified successfully.')
+                    ]);
                 }
 
                 if ($this->session->isLoggedIn()) {

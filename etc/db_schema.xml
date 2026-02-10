@@ -5,4 +5,21 @@
         <column xsi:type="varchar" name="phone_number" nullable="true" length="255" comment="Phone Number"/>
         <column xsi:type="smallint" name="phone_verified" nullable="true" default="0" comment="Phone Verification Status"/>
     </table>
+    
+    <!-- Separate table for address phone verification to avoid Quote Address conflicts -->
+    <table name="idangerous_address_phone_verification" resource="default" engine="innodb" comment="Address Phone Verification Status">
+        <column xsi:type="int" name="address_id" unsigned="true" nullable="false" identity="false" comment="Customer Address ID"/>
+        <column xsi:type="smallint" name="is_verified" nullable="false" default="0" comment="Phone Verification Status"/>
+        <column xsi:type="timestamp" name="verified_at" on_update="false" nullable="true" comment="Verification Timestamp"/>
+        <column xsi:type="varchar" name="verified_ip" nullable="true" length="45" comment="Verification IP Address"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="address_id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="FK_ADDR_PHONE_VERIF_ADDR_ID" 
+                    table="idangerous_address_phone_verification" column="address_id" 
+                    referenceTable="customer_address_entity" referenceColumn="entity_id" onDelete="CASCADE"/>
+        <index referenceId="IDX_ADDR_PHONE_VERIFIED" indexType="btree">
+            <column name="is_verified"/>
+        </index>
+    </table>
 </schema>

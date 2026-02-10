@@ -1,6 +1,10 @@
 type Mutation {
     sendPhoneOtp(input: SendPhoneOtpInput!): SendPhoneOtpOutput @resolver(class: "IDangerous\\PhoneOtpVerification\\Model\\Resolver\\SendPhoneOtp")
     verifyPhoneOtp(input: VerifyPhoneOtpInput!): VerifyPhoneOtpOutput @resolver(class: "IDangerous\\PhoneOtpVerification\\Model\\Resolver\\VerifyPhoneOtp")
+
+    # Address/Checkout OTP flow (stateless via verification token)
+    sendAddressPhoneOtp(input: SendPhoneOtpInput!): SendPhoneOtpOutput @resolver(class: "IDangerous\\PhoneOtpVerification\\Model\\Resolver\\SendAddressPhoneOtp")
+    verifyAddressPhoneOtp(input: VerifyPhoneOtpInput!): VerifyAddressPhoneOtpOutput @resolver(class: "IDangerous\\PhoneOtpVerification\\Model\\Resolver\\VerifyAddressPhoneOtp")
 }
 
 type Query {
@@ -34,6 +38,13 @@ type VerifyPhoneOtpOutput {
     message: String!
     phone_verified: Boolean
     customer_updated: Boolean
+}
+
+type VerifyAddressPhoneOtpOutput {
+    success: Boolean!
+    message: String!
+    verification_token: String
+    expires_in: Int
 }
 
 type PhoneOtpStatusOutput {

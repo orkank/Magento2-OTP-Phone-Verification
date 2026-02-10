@@ -20,4 +20,50 @@
     <type name="Magento\Customer\Api\CustomerRepositoryInterface">
         <plugin name="phone_verification_customer_save" type="IDangerous\PhoneOtpVerification\Plugin\GraphQl\CreateCustomerV2Plugin" />
     </type>
+
+    <!-- Address Repository Plugin for Phone Verification -->
+    <type name="Magento\Customer\Api\AddressRepositoryInterface">
+        <plugin name="phone_verification_address_save" type="IDangerous\PhoneOtpVerification\Plugin\Customer\AddressRepositoryPlugin" />
+    </type>
+
+    <!-- Checkout Shipping Information Management Plugin -->
+    <type name="Magento\Checkout\Model\ShippingInformationManagement">
+        <plugin name="phone_verification_shipping_information" type="IDangerous\PhoneOtpVerification\Plugin\Checkout\ShippingInformationManagementPlugin" />
+    </type>
+
+    <!-- Customer Address Data Formatter Plugin - DISABLED to prevent phone_verified from being copied to quote -->
+    <!-- <type name="Magento\Customer\Model\Address\CustomerAddressDataFormatter">
+        <plugin name="phone_verification_address_data" type="IDangerous\PhoneOtpVerification\Plugin\Customer\Address\CustomerAddressDataProviderPlugin" />
+    </type> -->
+
+    <!-- Quote Address Plugin to prevent phoneVerified from being added -->
+    <type name="Magento\Quote\Model\Quote\Address">
+        <plugin name="phone_verification_quote_address" type="IDangerous\PhoneOtpVerification\Plugin\Quote\AddressPlugin" />
+    </type>
+
+    <!-- Quote Address Interface Plugin for extension attributes -->
+    <type name="Magento\Quote\Api\Data\AddressInterface">
+        <plugin name="phone_verification_quote_address_extension" type="IDangerous\PhoneOtpVerification\Plugin\Quote\Address\ExtensionAttributesPlugin" />
+    </type>
+
+    <!-- WebAPI Service Output Processor Plugin -->
+    <type name="Magento\Framework\Webapi\ServiceOutputProcessor">
+        <plugin name="phone_verification_webapi_output" type="IDangerous\PhoneOtpVerification\Plugin\Framework\Webapi\ServiceOutputProcessorPlugin" sortOrder="1" />
+    </type>
+
+    <!-- REST input sanitizer: prevents PhoneVerified from breaking checkout -->
+    <type name="Magento\Framework\Webapi\Rest\Request">
+        <plugin name="phone_verification_rest_request_sanitizer" type="IDangerous\PhoneOtpVerification\Plugin\Framework\Webapi\Rest\RequestPlugin" sortOrder="1" />
+    </type>
+
+    <!-- Prefer real client IP behind Cloudflare / proxies -->
+    <type name="Magento\Framework\HTTP\PhpEnvironment\RemoteAddress">
+        <arguments>
+            <argument name="alternativeHeaders" xsi:type="array">
+                <item name="cf_connecting_ip" xsi:type="string">HTTP_CF_CONNECTING_IP</item>
+                <item name="x_forwarded_for" xsi:type="string">HTTP_X_FORWARDED_FOR</item>
+                <item name="x_real_ip" xsi:type="string">HTTP_X_REAL_IP</item>
+            </argument>
+        </arguments>
+    </type>
 </config>

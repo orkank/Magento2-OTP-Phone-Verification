@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceBlock name="address_book">
+            <arguments>
+                <argument name="view_model" xsi:type="object">IDangerous\PhoneOtpVerification\ViewModel\AddressPhoneVerification</argument>
+            </arguments>
+            <action method="setTemplate">
+                <argument name="template" xsi:type="string">IDangerous_PhoneOtpVerification::address/book.phtml</argument>
+            </action>
+        </referenceBlock>
+        <referenceBlock name="address_grid">
+            <arguments>
+                <argument name="view_model" xsi:type="object">IDangerous\PhoneOtpVerification\ViewModel\AddressPhoneVerification</argument>
+            </arguments>
+            <action method="setTemplate">
+                <argument name="template" xsi:type="string">IDangerous_PhoneOtpVerification::address/grid.phtml</argument>
+            </action>
+        </referenceBlock>
+    </body>
+</page>

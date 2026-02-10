@@ -37,6 +37,26 @@
                     </depends>
                 </field>
             </group>
+            <group id="address" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Address Phone Verification</label>
+                <field id="enable_address_phone_verification" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Require Phone Verification for New Addresses</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <depends>
+                        <field id="enabled">1</field>
+                    </depends>
+                    <comment translate="true">If enabled, users must verify phone number when adding a new address (both in account and checkout)</comment>
+                </field>
+                <field id="require_unverified_address_verification" translate="label" type="select" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Require Verification for Unverified Existing Addresses</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <depends>
+                        <field id="enabled">1</field>
+                        <field id="enable_address_phone_verification">1</field>
+                    </depends>
+                    <comment translate="true">If enabled, users must verify phone number for existing addresses that haven't been verified yet (e.g., addresses added before this feature was enabled)</comment>
+                </field>
+            </group>
         </section>
     </system>
 </config>

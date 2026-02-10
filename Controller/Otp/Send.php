@@ -27,13 +27,15 @@ class Send extends Action
         $result = $this->resultJsonFactory->create();
         try {
             $phone = $this->getRequest()->getParam('phone');
+            $context = (string)$this->getRequest()->getParam('context'); // registration|account|address|checkout
 
             if (!$phone) {
                 throw new \Exception(__('Please enter phone number.'));
             }
 
             // Send OTP
-            $otp = $this->otpManager->sendOtp($phone);
+            $skipAvailabilityCheck = in_array($context, ['address', 'checkout'], true);
+            $otp = $this->otpManager->sendOtp($phone, $skipAvailabilityCheck);
 
             // Debug: Verify session data
             $session = ObjectManager::getInstance()->get(\Magento\Customer\Model\Session::class);
