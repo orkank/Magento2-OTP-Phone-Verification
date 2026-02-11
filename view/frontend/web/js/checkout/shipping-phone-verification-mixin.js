@@ -104,10 +104,25 @@ define([
             return $modal;
         }
 
+        var note = '';
+        try {
+            if (window.idgPhoneOtp && window.idgPhoneOtp.addressOtpModalNote) {
+                note = String(window.idgPhoneOtp.addressOtpModalNote || '');
+            }
+        } catch (e) {
+            note = '';
+        }
+
+        var noteHtml = '';
+        if (note) {
+            noteHtml = '<p class="idg-otp-modal__desc">' + $('<div/>').text(note).html().replace(/\n/g, '<br/>') + '</p>';
+        }
+
         $('body').append(
             '<div id="checkout-otp-modal" style="display:none;">' +
                 '<div class="idg-otp-modal">' +
                     '<p class="idg-otp-modal__desc">' + $t('Phone Verification Required') + '</p>' +
+                    noteHtml +
                     '<div class="idg-otp-modal__error" id="checkout-otp-error" style="display:none;"></div>' +
                     '<div class="idg-otp-modal__grid">' +
                         '<div class="idg-otp-modal__field">' +

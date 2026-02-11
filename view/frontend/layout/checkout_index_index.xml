@@ -4,5 +4,13 @@
     <head>
         <css src="IDangerous_PhoneOtpVerification::css/phone-verification.css"/>
     </head>
+    <body>
+        <referenceContainer name="before.body.end">
+            <block class="IDangerous\PhoneOtpVerification\Block\Checkout\OtpConfig"
+                   name="idg_phoneotp_checkout_config"
+                   template="IDangerous_PhoneOtpVerification::checkout/otp-config.phtml"
+                   cacheable="false"/>
+        </referenceContainer>
+    </body>
 </page>
 

@@ -12,6 +12,7 @@ class Config extends AbstractHelper
     const XML_PATH_OTP_MESSAGE = 'phone_otp/general/otp_message';
     const XML_PATH_ENABLE_ADDRESS_PHONE_VERIFICATION = 'phone_otp/address/enable_address_phone_verification';
     const XML_PATH_REQUIRE_UNVERIFIED_ADDRESS_VERIFICATION = 'phone_otp/address/require_unverified_address_verification';
+    const XML_PATH_ADDRESS_OTP_MODAL_NOTE = 'phone_otp/address/address_otp_modal_note';
 
     public function isEnabled($store = null)
     {
@@ -67,5 +68,16 @@ class Config extends AbstractHelper
             ScopeInterface::SCOPE_STORE,
             $store
         );
+    }
+
+    public function getAddressOtpModalNote($store = null): string
+    {
+        $note = (string)$this->scopeConfig->getValue(
+            self::XML_PATH_ADDRESS_OTP_MODAL_NOTE,
+            ScopeInterface::SCOPE_STORE,
+            $store
+        );
+
+        return trim($note);
     }
 }

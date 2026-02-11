@@ -66,6 +66,7 @@ class PhoneVerification extends Template
             'verifyOtpUrl' => $this->urlBuilder->getUrl('phoneotp/otp/verify'),
             'customerPhoneNumber' => $customerPhone,
             'customerPhoneVerified' => $customerPhoneVerified ? 1 : 0,
+            'addressOtpModalNote' => $this->configHelper->getAddressOtpModalNote(),
             'translations' => [
                 'sendOtp' => __('Send OTP'),
                 'verifyOtp' => __('Verify OTP'),

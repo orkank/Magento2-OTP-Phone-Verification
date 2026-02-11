@@ -11,6 +11,11 @@ $config = $block->getConfig();
         <p class="idg-otp-modal__desc idg-otp-modal__desc--info">
             <?= $block->escapeHtml(__('Phone number verification is required for this address.')) ?>
         </p>
+        <?php if (!empty($config['addressOtpModalNote'])): ?>
+            <p class="idg-otp-modal__desc">
+                <?= /* admin-entered text */ nl2br($block->escapeHtml($config['addressOtpModalNote'])) ?>
+            </p>
+        <?php endif; ?>
 
         <div class="idg-otp-modal__error" id="address-otp-error" style="display:none;"></div>
 
@@ -61,6 +66,7 @@ $config = $block->getConfig();
             "verifyOtpUrl": "<?= $block->escapeUrl($config['verifyOtpUrl']) ?>",
             "customerPhoneNumber": "<?= $block->escapeJs($config['customerPhoneNumber'] ?? '') ?>",
             "customerPhoneVerified": <?= (int)($config['customerPhoneVerified'] ?? 0) ?>,
+            "addressOtpModalNote": "<?= $block->escapeJs($config['addressOtpModalNote'] ?? '') ?>",
             "translations": <?= json_encode($config['translations']) ?>
         }
     }

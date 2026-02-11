@@ -4,10 +4,13 @@ namespace IDangerous\PhoneOtpVerification\Plugin\Customer;
 use Magento\Customer\Api\AddressRepositoryInterface;
 use Magento\Customer\Api\Data\AddressInterface;
 use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Phrase;
 use IDangerous\PhoneOtpVerification\Helper\Customer as CustomerHelper;
+use IDangerous\PhoneOtpVerification\Helper\Config as ConfigHelper;
 use IDangerous\PhoneOtpVerification\Model\PhoneVerificationTokenManager;
 use Magento\Customer\Model\Session;
 use Magento\Framework\App\RequestInterface;
+use Magento\Framework\App\State;
 use Psr\Log\LoggerInterface;
 
 class AddressRepositoryPlugin
@@ -38,6 +41,16 @@ class AddressRepositoryPlugin
     private $tokenManager;
 
     /**
+     * @var ConfigHelper
+     */
+    private $configHelper;
+
+    /**
+     * @var State
+     */
+    private $appState;
+
+    /**
      * @param CustomerHelper $customerHelper
      * @param Session $customerSession
      * @param RequestInterface $request
@@ -48,13 +61,17 @@ class AddressRepositoryPlugin
         Session $customerSession,
         RequestInterface $request,
         LoggerInterface $logger,
-        PhoneVerificationTokenManager $tokenManager
+        PhoneVerificationTokenManager $tokenManager,
+        ConfigHelper $configHelper,
+        State $appState
     ) {
         $this->customerHelper = $customerHelper;
         $this->customerSession = $customerSession;
         $this->request = $request;
         $this->logger = $logger;
         $this->tokenManager = $tokenManager;
+        $this->configHelper = $configHelper;
+        $this->appState = $appState;
     }
 
     /**
@@ -98,6 +115,11 @@ class AddressRepositoryPlugin
                 ]);
 
                 if (!$isSameAsCustomerPhone) {
+                    // If customer already has any verified address with same phone, skip OTP requirement
+                    if ($customerId > 0 && $this->customerHelper->isAnyVerifiedAddressPhoneForCustomer($customerId, (string)$telephone)) {
+                        return [$address];
+                    }
+
                     // Token bridge for mobile app: accept proof via header
                     $token = (string)$this->request->getHeader('X-Phone-Verification-Token');
                     $normalizedPhone = preg_replace('/[^0-9]/', '', (string)$telephone);
@@ -136,7 +158,7 @@ class AddressRepositoryPlugin
                         if (!$sessionVerified && !$addressPhoneVerified) {
                             $this->logger->warning('AddressRepositoryPlugin::beforeSave - Verification failed for existing address');
                             throw new LocalizedException(
-                                __('Phone number verification is required for this address. Please verify the phone number before saving.')
+                                $this->withAdminNoteIfGraphql(__('Phone number verification is required for this address. Please verify the phone number before saving.'))
                             );
                         }
                     } else {
@@ -161,7 +183,7 @@ class AddressRepositoryPlugin
                         if (!$sessionVerified && !$sessionVerifiedOriginal && !$phoneVerified && !$addressPhoneVerified) {
                             $this->logger->warning('AddressRepositoryPlugin::beforeSave - Verification failed for new address');
                             throw new LocalizedException(
-                                __('Phone number verification is required for this address. Please verify the phone number before saving.')
+                                $this->withAdminNoteIfGraphql(__('Phone number verification is required for this address. Please verify the phone number before saving.'))
                             );
                         }
                     }
@@ -282,6 +304,14 @@ class AddressRepositoryPlugin
                     }
                 }
 
+                // Per-phone skip rule: if customer has any verified address with same phone, mark this as verified too
+                if (!$isVerified) {
+                    $customerId = (int)($result->getCustomerId() ?: $address->getCustomerId());
+                    if ($customerId > 0 && $this->customerHelper->isAnyVerifiedAddressPhoneForCustomer($customerId, (string)$telephone)) {
+                        $isVerified = true;
+                    }
+                }
+
                 // Save verification status if verified
                 // Use a flag to prevent infinite loop - only save if we're not already in a save cycle
                 if ($isVerified && !$this->request->getParam('_phone_verification_saving')) {
@@ -321,6 +351,39 @@ class AddressRepositoryPlugin
             ]);
             // Don't throw exception in afterSave, just log it
             return $result;
+        }
+    }
+
+    private function withAdminNoteIfGraphql(Phrase $base): Phrase
+    {
+        if (!$this->isGraphqlRequest()) {
+            return $base;
+        }
+
+        $note = $this->configHelper->getAddressOtpModalNote();
+        if ($note === '') {
+            return $base;
+        } else {
+          return new Phrase($note);
+        }
+
+        $combined = rtrim($base->render()) . "\n" . $note;
+        return new Phrase($combined);
+    }
+
+    private function isGraphqlRequest(): bool
+    {
+        try {
+            return $this->appState->getAreaCode() === \Magento\Framework\App\Area::AREA_GRAPHQL;
+        } catch (\Exception $e) {
+            // area code may not be set; fall back to path check
+        }
+
+        try {
+            $path = (string)$this->request->getPathInfo();
+            return stripos($path, 'graphql') !== false;
+        } catch (\Exception $e) {
+            return false;
         }
     }
 }

@@ -1,0 +1,11 @@
+<?php
+/**
+ * @var \IDangerous\PhoneOtpVerification\Block\Checkout\OtpConfig $block
+ */
+$note = $block->getAddressOtpModalNote();
+?>
+<script>
+window.idgPhoneOtp = window.idgPhoneOtp || {};
+window.idgPhoneOtp.addressOtpModalNote = <?= json_encode($note, JSON_UNESCAPED_UNICODE) ?>;
+</script>
+

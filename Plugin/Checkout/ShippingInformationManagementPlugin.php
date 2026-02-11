@@ -5,11 +5,13 @@ use Magento\Checkout\Api\Data\ShippingInformationInterface;
 use Magento\Checkout\Model\ShippingInformationManagement;
 use Magento\Framework\Exception\LocalizedException;
 use IDangerous\PhoneOtpVerification\Helper\Customer as CustomerHelper;
+use IDangerous\PhoneOtpVerification\Helper\Config as ConfigHelper;
 use IDangerous\PhoneOtpVerification\Model\PhoneVerificationTokenManager;
 use Magento\Customer\Model\Session;
 use Magento\Framework\App\RequestInterface;
 use Magento\Quote\Api\CartRepositoryInterface;
 use Magento\Customer\Api\AddressRepositoryInterface;
+use Magento\Framework\Phrase;
 
 class ShippingInformationManagementPlugin
 {
@@ -39,6 +41,11 @@ class ShippingInformationManagementPlugin
     protected $addressRepository;
 
     /**
+     * @var ConfigHelper
+     */
+    private $configHelper;
+
+    /**
      * @var PhoneVerificationTokenManager
      */
     private $tokenManager;
@@ -56,6 +63,7 @@ class ShippingInformationManagementPlugin
         RequestInterface $request,
         CartRepositoryInterface $cartRepository,
         AddressRepositoryInterface $addressRepository,
+        ConfigHelper $configHelper,
         PhoneVerificationTokenManager $tokenManager
     ) {
         $this->customerHelper = $customerHelper;
@@ -63,6 +71,7 @@ class ShippingInformationManagementPlugin
         $this->request = $request;
         $this->cartRepository = $cartRepository;
         $this->addressRepository = $addressRepository;
+        $this->configHelper = $configHelper;
         $this->tokenManager = $tokenManager;
     }
 
@@ -115,7 +124,7 @@ class ShippingInformationManagementPlugin
     protected function validateAddressPhone($address, $addressType, int $customerId = 0)
     {
         $telephone = $address->getTelephone();
-        
+
         if (empty($telephone)) {
             return; // No phone number, skip verification
         }
@@ -155,14 +164,14 @@ class ShippingInformationManagementPlugin
         // Check if verification was done
         $phoneVerified = $this->request->getParam('phone_verified');
         $addressPhoneVerified = $this->request->getParam($addressType . '_address_phone_verified');
-        
+
         // Check session for new address verification
         $sessionKey = 'checkout_' . $addressType . '_phone_verified_' . md5($telephone);
         $sessionVerified = $this->customerSession->getData($sessionKey);
 
         if (!$phoneVerified && !$addressPhoneVerified && !$sessionVerified) {
             throw new LocalizedException(
-                __('Phone number verification is required for the %1 address. Please verify the phone number before proceeding.', $addressType)
+                $this->withAdminNote(__('Phone number verification is required for the %1 address. Please verify the phone number before proceeding.', $addressType))
             );
         }
     }
@@ -178,11 +187,11 @@ class ShippingInformationManagementPlugin
     {
         try {
             $address = $this->addressRepository->getById($addressId);
-            
+
             // Check if verification is required for this existing address
             if ($this->customerHelper->isAddressPhoneVerificationRequired($address)) {
                 $telephone = $address->getTelephone();
-                
+
                 // Token bridge for mobile app: accept proof via header
                 $token = (string)$this->request->getHeader('X-Phone-Verification-Token');
                 $normalizedPhone = preg_replace('/[^0-9]/', '', (string)$telephone);
@@ -217,13 +226,27 @@ class ShippingInformationManagementPlugin
 
                 if (!$phoneVerified && !$addressPhoneVerified && !$sessionVerified) {
                     throw new LocalizedException(
-                        __('The selected address has an unverified phone number. Please verify the phone number before proceeding.')
+                        $this->withAdminNote(__('The selected address has an unverified phone number. Please verify the phone number before proceeding.'))
                     );
                 }
             }
         } catch (\Magento\Framework\Exception\NoSuchEntityException $e) {
             // Address not found, skip validation
         }
+    }
+
+    private function withAdminNote(Phrase $base): Phrase
+    {
+        $note = $this->configHelper->getAddressOtpModalNote();
+
+        if ($note === '') {
+            return $base;
+        } else {
+          return new Phrase($note);
+        }
+
+        $combined = rtrim($base->render()) . "\n" . $note;
+        return new Phrase($combined);
     }
 
     /**
@@ -274,7 +297,7 @@ class ShippingInformationManagementPlugin
         }
 
         // Process billing address phone verification if different
-        if ($billingAddress && $billingAddress->getTelephone() 
+        if ($billingAddress && $billingAddress->getTelephone()
             && $billingAddress->getTelephone() !== $shippingAddress->getTelephone()) {
             $this->processAddressPhoneVerification($billingAddress, 'billing');
         }
@@ -292,7 +315,7 @@ class ShippingInformationManagementPlugin
     protected function processAddressPhoneVerification($address, $addressType)
     {
         $telephone = $address->getTelephone();
-        
+
         if (empty($telephone)) {
             return;
         }
