@@ -64,6 +64,7 @@ $config = $block->getConfig();
         "IDangerous_PhoneOtpVerification/js/address-phone-verification": {
             "sendOtpUrl": "<?= $block->escapeUrl($config['sendOtpUrl']) ?>",
             "verifyOtpUrl": "<?= $block->escapeUrl($config['verifyOtpUrl']) ?>",
+            "isVerifiedUrl": "<?= $block->escapeUrl($config['isVerifiedUrl']) ?>",
             "customerPhoneNumber": "<?= $block->escapeJs($config['customerPhoneNumber'] ?? '') ?>",
             "customerPhoneVerified": <?= (int)($config['customerPhoneVerified'] ?? 0) ?>,
             "addressOtpModalNote": "<?= $block->escapeJs($config['addressOtpModalNote'] ?? '') ?>",

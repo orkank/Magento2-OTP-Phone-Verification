@@ -23,6 +23,8 @@ define([
         let timerInterval = null;
         let otpModal = null;
         let pendingSubmit = false;
+        let originalMagentoSubmitHandler = null;
+        const verifiedPhoneCache = {}; // key: normalized phone => true/false
 
         // Initialize modal
         if ($modal.length) {
@@ -37,10 +39,121 @@ define([
             otpModal = modal(modalOptions, $modal);
         }
 
+        function normalizePhone(phone) {
+            return String(phone || '').replace(/\D/g, '');
+        }
+
+        function setVerifiedState(phone) {
+            $phoneVerified.val('1');
+            $phoneNumber.val(phone);
+            $('.phone-verified-indicator').remove();
+            $phoneField.after(
+                '<span class="phone-verified-indicator" style="color: green; margin-left: 10px; display: block; margin-top: 5px;">✓ ' +
+                    (config.translations.phoneVerified || $t('Phone Verified')) +
+                '</span>'
+            );
+        }
+
+        function appendVerifiedHiddenInputs() {
+            $form.find('input[name="address_phone_verified"]').remove();
+            $form.find('input[name="phone_verified"]').remove();
+            $form.append('<input type="hidden" name="address_phone_verified" value="1"/>');
+            $form.append('<input type="hidden" name="phone_verified" value="1"/>');
+        }
+
+        function submitFormUsingMagentoOrFallback() {
+            const formValidator = $form.data('validator');
+
+            // Prefer original Magento submit handler to keep validation behavior consistent.
+            if (originalMagentoSubmitHandler) {
+                try {
+                    return originalMagentoSubmitHandler.call(formValidator ? formValidator.settings : this, $form[0]);
+                } catch (e) {
+                    console.error('Address Phone Verification: Error in original submit handler', e);
+                }
+            }
+
+            if (formValidator && formValidator.settings && typeof formValidator.settings.submitHandler === 'function') {
+                try {
+                    return formValidator.settings.submitHandler($form[0]);
+                } catch (e2) {
+                    console.error('Address Phone Verification: Error in current submit handler', e2);
+                }
+            }
+
+            if ($form.valid && typeof $form.valid === 'function') {
+                if ($form.valid()) {
+                    $form[0].submit();
+                }
+                return;
+            }
+
+            $form[0].submit();
+        }
+
+        function submitPendingFormWithVerifiedFlags() {
+            if (!pendingSubmit) {
+                return;
+            }
+            pendingSubmit = false;
+            setTimeout(function () {
+                appendVerifiedHiddenInputs();
+                console.log('Address Phone Verification: Submitting form with verified flags');
+                submitFormUsingMagentoOrFallback();
+            }, 0);
+        }
+
+        function checkPhoneAlreadyVerifiedForCustomer(phone) {
+            const deferred = $.Deferred();
+            const normalized = normalizePhone(phone);
+            if (!normalized || normalized.length < 10) {
+                deferred.resolve(false);
+                return deferred.promise();
+            }
+
+            // Profile phone shortcut (already handled in needsVerification, but keep safe here)
+            if (config.customerPhoneVerified == 1 && config.customerPhoneNumber) {
+                const customerPhoneTrimmed = normalizePhone(config.customerPhoneNumber);
+                if (customerPhoneTrimmed && customerPhoneTrimmed === normalized) {
+                    verifiedPhoneCache[normalized] = true;
+                    deferred.resolve(true);
+                    return deferred.promise();
+                }
+            }
+
+            if (verifiedPhoneCache.hasOwnProperty(normalized)) {
+                deferred.resolve(!!verifiedPhoneCache[normalized]);
+                return deferred.promise();
+            }
+
+            if (!config.isVerifiedUrl) {
+                verifiedPhoneCache[normalized] = false;
+                deferred.resolve(false);
+                return deferred.promise();
+            }
+
+            $.ajax({
+                url: config.isVerifiedUrl,
+                type: 'GET',
+                dataType: 'json',
+                data: { phone: phone }
+            }).done(function (resp) {
+                const isVerified = !!(resp && resp.verified);
+                verifiedPhoneCache[normalized] = isVerified;
+                deferred.resolve(isVerified);
+            }).fail(function () {
+                // don't block UX; treat as not verified and proceed with OTP
+                verifiedPhoneCache[normalized] = false;
+                deferred.resolve(false);
+            });
+
+            return deferred.promise();
+        }
+
         // Check if phone verification is needed
         function needsVerification() {
             const phone = $phoneField.val() || '';
-            const phoneTrimmed = phone.replace(/\D/g, '');
+            const phoneTrimmed = normalizePhone(phone);
             
             // If phone is empty, no verification needed
             if (!phone || phoneTrimmed.length < 10) {
@@ -49,13 +162,18 @@ define([
 
             // If customer already has this phone verified in profile, no re-verification required
             if (config.customerPhoneVerified == 1 && config.customerPhoneNumber) {
-                const customerPhoneTrimmed = String(config.customerPhoneNumber).replace(/\D/g, '');
+                const customerPhoneTrimmed = normalizePhone(config.customerPhoneNumber);
                 if (customerPhoneTrimmed && customerPhoneTrimmed === phoneTrimmed) {
                     // keep hidden state consistent so UI doesn't re-open modal
-                    $phoneVerified.val('1');
-                    $phoneNumber.val(phone);
+                    setVerifiedState(phone);
                     return false;
                 }
+            }
+
+            // Per-phone skip rule (cached): if this phone was verified on any address before, skip OTP.
+            if (verifiedPhoneCache[phoneTrimmed] === true) {
+                setVerifiedState(phone);
+                return false;
             }
 
             // Check if already verified for this phone number
@@ -64,6 +182,23 @@ define([
             }
 
             return true;
+        }
+
+        function startVerificationFlowOrSubmit() {
+            const phone = $phoneField.val() || '';
+            pendingSubmit = true;
+
+            checkPhoneAlreadyVerifiedForCustomer(phone).done(function (alreadyVerified) {
+                if (alreadyVerified) {
+                    setVerifiedState(phone);
+                    submitPendingFormWithVerifiedFlags();
+                    return;
+                }
+
+                showVerificationModal();
+            });
+
+            return false;
         }
 
         // Show verification modal
@@ -206,68 +341,13 @@ define([
                 },
                 success: function(response) {
                     if (response.success) {
-                        $phoneVerified.val('1');
-                        $phoneNumber.val(phone);
+                        setVerifiedState(phone);
                         
                         // Close modal
                         closeVerificationModal();
                         
-                        // Add verified indicator near phone field
-                        $('.phone-verified-indicator').remove();
-                        $phoneField.after('<span class="phone-verified-indicator" style="color: green; margin-left: 10px; display: block; margin-top: 5px;">✓ ' + 
-                            (config.translations.phoneVerified || $t('Phone Verified')) + '</span>');
-                        
                         // If form submission was pending, submit it now
-                        if (pendingSubmit) {
-                            pendingSubmit = false;
-                            
-                            // Wait a bit to ensure modal is closed
-                            setTimeout(function() {
-                                // Remove existing hidden inputs if any
-                                $form.find('input[name="address_phone_verified"]').remove();
-                                $form.find('input[name="phone_verified"]').remove();
-                                
-                                // Add verified flags to form BEFORE submitting
-                                const verifiedInput1 = $('<input>').attr({
-                                    type: 'hidden',
-                                    name: 'address_phone_verified',
-                                    value: '1'
-                                });
-                                const verifiedInput2 = $('<input>').attr({
-                                    type: 'hidden',
-                                    name: 'phone_verified',
-                                    value: '1'
-                                });
-                                
-                                $form.append(verifiedInput1);
-                                $form.append(verifiedInput2);
-                                
-                                console.log('Address Phone Verification: Submitting form with verified flags');
-                                
-                                // Submit form using Magento's validation if available
-                                const formValidator = $form.data('validator');
-                                if (formValidator && formValidator.settings && formValidator.settings.submitHandler) {
-                                    // Use Magento's submit handler
-                                    try {
-                                        formValidator.settings.submitHandler($form[0]);
-                                    } catch (e) {
-                                        console.error('Address Phone Verification: Error in submit handler', e);
-                                        // Fallback: submit directly
-                                        $form[0].submit();
-                                    }
-                                } else if ($form.valid && typeof $form.valid === 'function') {
-                                    // Use jQuery validation
-                                    if ($form.valid()) {
-                                        $form[0].submit();
-                                    } else {
-                                        console.error('Address Phone Verification: Form validation failed');
-                                    }
-                                } else {
-                                    // Fallback: submit directly
-                                    $form[0].submit();
-                                }
-                            }, 200);
-                        }
+                        submitPendingFormWithVerifiedFlags();
                     } else {
                         showError(response.message || config.translations.invalidOtp || $t('Invalid OTP code'));
                         $verifyOtpButton.prop('disabled', false).text(config.translations.verifyOtp || $t('Verify OTP'));
@@ -292,6 +372,15 @@ define([
                 $phoneNumber.val('');
                 $('.phone-verified-indicator').remove();
             }
+
+            // Proactively warm cache (best effort; avoids OTP if already verified)
+            if (currentPhone) {
+                checkPhoneAlreadyVerifiedForCustomer(currentPhone).done(function (alreadyVerified) {
+                    if (alreadyVerified) {
+                        setVerifiedState(currentPhone);
+                    }
+                });
+            }
         });
 
         // Override Magento's form validation submitHandler - try multiple times
@@ -301,24 +390,17 @@ define([
                 // Only override if not already overridden
                 if (!formValidator.settings._phoneVerificationOverridden) {
                     const originalSubmitHandler = formValidator.settings.submitHandler;
+                    originalMagentoSubmitHandler = originalSubmitHandler || null;
                     
                     formValidator.settings.submitHandler = function(form) {
                         // Check if phone verification is needed
                         if (needsVerification() && $phoneVerified.val() !== '1') {
-                            // Show modal for phone verification
-                            showVerificationModal();
-                            pendingSubmit = true;
-                            return false; // Prevent form submission
+                            return startVerificationFlowOrSubmit();
                         }
 
                         // Add verified flag to form if verified
                         if ($phoneVerified.val() === '1') {
-                            // Remove existing hidden inputs if any
-                            $form.find('input[name="address_phone_verified"]').remove();
-                            $form.find('input[name="phone_verified"]').remove();
-                            // Add new ones
-                            $form.append('<input type="hidden" name="address_phone_verified" value="1"/>');
-                            $form.append('<input type="hidden" name="phone_verified" value="1"/>');
+                            appendVerifiedHiddenInputs();
                         }
 
                         // Call original submit handler if verification passed
@@ -367,11 +449,7 @@ define([
                         e.stopImmediatePropagation();
                         e.stopPropagation();
                         
-                        // Show modal for phone verification
-                        showVerificationModal();
-                        pendingSubmit = true;
-                        
-                        return false;
+                        return startVerificationFlowOrSubmit();
                     }
                 }, true); // Use capture phase
             }
@@ -387,11 +465,7 @@ define([
                 e.stopImmediatePropagation();
                 e.stopPropagation();
                 
-                // Show modal for phone verification
-                showVerificationModal();
-                pendingSubmit = true;
-                
-                return false;
+                return startVerificationFlowOrSubmit();
             }
         });
 
@@ -404,30 +478,12 @@ define([
                 // Check if phone verification is needed
                 if (needsVerification() && $phoneVerified.val() !== '1') {
                     console.log('Address Phone Verification: Phone verification needed, preventing submit');
-                    // Show modal for phone verification
-                    showVerificationModal();
-                    pendingSubmit = true;
-                    return false;
+                    return startVerificationFlowOrSubmit();
                 }
 
                 // Add verified flag to form if verified BEFORE submitting
                 if ($phoneVerified.val() === '1') {
-                    // Remove existing hidden inputs if any
-                    $form.find('input[name="address_phone_verified"]').remove();
-                    $form.find('input[name="phone_verified"]').remove();
-                    // Create and append hidden inputs
-                    const verifiedInput1 = document.createElement('input');
-                    verifiedInput1.type = 'hidden';
-                    verifiedInput1.name = 'address_phone_verified';
-                    verifiedInput1.value = '1';
-                    formElement.appendChild(verifiedInput1);
-                    
-                    const verifiedInput2 = document.createElement('input');
-                    verifiedInput2.type = 'hidden';
-                    verifiedInput2.name = 'phone_verified';
-                    verifiedInput2.value = '1';
-                    formElement.appendChild(verifiedInput2);
-                    
+                    appendVerifiedHiddenInputs();
                     console.log('Address Phone Verification: Added verification flags to form');
                 }
 
@@ -447,21 +503,12 @@ define([
                     e.stopImmediatePropagation();
                     e.stopPropagation();
                     
-                    // Show modal for phone verification
-                    showVerificationModal();
-                    pendingSubmit = true;
-                    
-                    return false;
+                    return startVerificationFlowOrSubmit();
                 }
 
                 // Add verified flag to form if verified
                 if ($phoneVerified.val() === '1') {
-                    // Remove existing hidden inputs if any
-                    $form.find('input[name="address_phone_verified"]').remove();
-                    $form.find('input[name="phone_verified"]').remove();
-                    // Add new ones
-                    $form.append('<input type="hidden" name="address_phone_verified" value="1"/>');
-                    $form.append('<input type="hidden" name="phone_verified" value="1"/>');
+                    appendVerifiedHiddenInputs();
                 }
             }, true); // Use capture phase
         }
@@ -476,33 +523,12 @@ define([
                 e.stopImmediatePropagation();
                 e.stopPropagation();
                 
-                // Show modal for phone verification
-                showVerificationModal();
-                pendingSubmit = true;
-                
-                return false;
+                return startVerificationFlowOrSubmit();
             }
 
             // Add verified flag to form if verified BEFORE submitting
             if ($phoneVerified.val() === '1') {
-                // Remove existing hidden inputs if any
-                $form.find('input[name="address_phone_verified"]').remove();
-                $form.find('input[name="phone_verified"]').remove();
-                
-                // Create and append hidden inputs using native DOM
-                const formEl = this;
-                const verifiedInput1 = document.createElement('input');
-                verifiedInput1.type = 'hidden';
-                verifiedInput1.name = 'address_phone_verified';
-                verifiedInput1.value = '1';
-                formEl.appendChild(verifiedInput1);
-                
-                const verifiedInput2 = document.createElement('input');
-                verifiedInput2.type = 'hidden';
-                verifiedInput2.name = 'phone_verified';
-                verifiedInput2.value = '1';
-                formEl.appendChild(verifiedInput2);
-                
+                appendVerifiedHiddenInputs();
                 console.log('Address Phone Verification: Added verification flags to form (jQuery handler)');
             }
         });

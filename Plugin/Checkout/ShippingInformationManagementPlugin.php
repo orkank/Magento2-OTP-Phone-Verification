@@ -171,7 +171,7 @@ class ShippingInformationManagementPlugin
 
         if (!$phoneVerified && !$addressPhoneVerified && !$sessionVerified) {
             throw new LocalizedException(
-                $this->withAdminNote(__('Phone number verification is required for the %1 address. Please verify the phone number before proceeding.', $addressType))
+                $this->withErrorCode($this->withAdminNote(__('Phone number verification is required for the %1 address. Please verify the phone number before proceeding.', $addressType)))
             );
         }
     }
@@ -226,7 +226,7 @@ class ShippingInformationManagementPlugin
 
                 if (!$phoneVerified && !$addressPhoneVerified && !$sessionVerified) {
                     throw new LocalizedException(
-                        $this->withAdminNote(__('The selected address has an unverified phone number. Please verify the phone number before proceeding.'))
+                        $this->withErrorCode($this->withAdminNote(__('The selected address has an unverified phone number. Please verify the phone number before proceeding.')))
                     );
                 }
             }
@@ -247,6 +247,19 @@ class ShippingInformationManagementPlugin
 
         $combined = rtrim($base->render()) . "\n" . $note;
         return new Phrase($combined);
+    }
+
+    private function withErrorCode(Phrase $base): Phrase
+    {
+        // Stable marker for clients (app/web) to detect OTP-required errors without relying on translatable text
+        $code = 'OTP01';
+        $text = rtrim($base->render());
+
+        if (stripos($text, $code) !== false) {
+            return $base;
+        }
+
+        return new Phrase($text . "\n" . $code);
     }
 
     /**

@@ -64,6 +64,7 @@ class PhoneVerification extends Template
             'enabled' => $this->configHelper->isAddressPhoneVerificationEnabled(),
             'sendOtpUrl' => $this->urlBuilder->getUrl('phoneotp/otp/send'),
             'verifyOtpUrl' => $this->urlBuilder->getUrl('phoneotp/otp/verify'),
+            'isVerifiedUrl' => $this->urlBuilder->getUrl('phoneotp/phone/isVerified'),
             'customerPhoneNumber' => $customerPhone,
             'customerPhoneVerified' => $customerPhoneVerified ? 1 : 0,
             'addressOtpModalNote' => $this->configHelper->getAddressOtpModalNote(),

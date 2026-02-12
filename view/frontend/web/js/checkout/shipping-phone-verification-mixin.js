@@ -70,6 +70,11 @@ define([
             return false;
         }
 
+        // Stable backend marker (preferred)
+        if (msg.indexOf('otp01') !== -1) {
+            return true;
+        }
+
         // EN/TR heuristics (we can’t rely on exact translation text)
         var hasVerify =
             msg.indexOf('verification') !== -1 ||

@@ -158,7 +158,7 @@ class AddressRepositoryPlugin
                         if (!$sessionVerified && !$addressPhoneVerified) {
                             $this->logger->warning('AddressRepositoryPlugin::beforeSave - Verification failed for existing address');
                             throw new LocalizedException(
-                                $this->withAdminNoteIfGraphql(__('Phone number verification is required for this address. Please verify the phone number before saving.'))
+                                $this->withErrorCode($this->withAdminNoteIfGraphql(__('Phone number verification is required for this address. Please verify the phone number before saving.')))
                             );
                         }
                     } else {
@@ -183,7 +183,7 @@ class AddressRepositoryPlugin
                         if (!$sessionVerified && !$sessionVerifiedOriginal && !$phoneVerified && !$addressPhoneVerified) {
                             $this->logger->warning('AddressRepositoryPlugin::beforeSave - Verification failed for new address');
                             throw new LocalizedException(
-                                $this->withAdminNoteIfGraphql(__('Phone number verification is required for this address. Please verify the phone number before saving.'))
+                                $this->withErrorCode($this->withAdminNoteIfGraphql(__('Phone number verification is required for this address. Please verify the phone number before saving.')))
                             );
                         }
                     }
@@ -369,6 +369,18 @@ class AddressRepositoryPlugin
 
         $combined = rtrim($base->render()) . "\n" . $note;
         return new Phrase($combined);
+    }
+
+    private function withErrorCode(Phrase $base): Phrase
+    {
+        $code = 'OTP01';
+        $text = rtrim($base->render());
+
+        if (stripos($text, $code) !== false) {
+            return $base;
+        }
+
+        return new Phrase($text . "\n" . $code);
     }
 
     private function isGraphqlRequest(): bool
