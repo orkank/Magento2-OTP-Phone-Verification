@@ -62,7 +62,8 @@ class PhoneVerificationTokenManager
     public function validateToken(string $token, int $customerId, string $normalizedPhone): bool
     {
         $token = trim($token);
-        if ($token === '' || $customerId <= 0 || $normalizedPhone === '') {
+        // allow guest context (customerId = 0) for stateless checkout flows
+        if ($token === '' || $customerId < 0 || $normalizedPhone === '') {
             return false;
         }
 

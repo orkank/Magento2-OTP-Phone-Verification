@@ -63,15 +63,10 @@ class VerifyAddressPhoneOtp implements ResolverInterface
                 $this->appState->setAreaCode(\Magento\Framework\App\Area::AREA_GRAPHQL);
             }
 
+            // customerId = 0 is allowed for guest checkout flows (token will be validated with customerId=0)
             $customerId = (int)($this->customerGraphqlHelper->getCurrentCustomerId($context) ?? 0);
-            if ($customerId <= 0) {
-                // Token is used to bridge to checkout REST (mine). Require auth.
-                return [
-                    'success' => false,
-                    'message' => __('Customer authentication is required.'),
-                    'verification_token' => null,
-                    'expires_in' => null
-                ];
+            if ($customerId < 0) {
+                $customerId = 0;
             }
 
             $this->logger->info('GraphQL VerifyAddressPhoneOtp: verifying', ['customer_id' => $customerId]);

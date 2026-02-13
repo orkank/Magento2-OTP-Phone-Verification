@@ -132,13 +132,16 @@ class ShippingInformationManagementPlugin
         // Token bridge for mobile app: accept proof via header
         $token = (string)$this->request->getHeader('X-Phone-Verification-Token');
         $normalizedPhone = preg_replace('/[^0-9]/', '', (string)$telephone);
-        if ($token && $customerId > 0 && $normalizedPhone) {
+        if ($token && $normalizedPhone) {
             if ($this->tokenManager->validateToken($token, $customerId, $normalizedPhone)) {
-                // Persist verification on matching saved addresses (app may not send customer_address_id)
-                if ($address->getCustomerAddressId()) {
-                    $this->customerHelper->saveVerifiedAddressPhone((int)$address->getCustomerAddressId(), (string)$telephone);
-                } else {
-                    $this->customerHelper->markVerifiedAddressesByPhoneForCustomer($customerId, (string)$telephone);
+                // Persist verification only for logged-in customers (guest has no saved addresses)
+                if ($customerId > 0) {
+                    // Persist verification on matching saved addresses (app may not send customer_address_id)
+                    if ($address->getCustomerAddressId()) {
+                        $this->customerHelper->saveVerifiedAddressPhone((int)$address->getCustomerAddressId(), (string)$telephone);
+                    } else {
+                        $this->customerHelper->markVerifiedAddressesByPhoneForCustomer($customerId, (string)$telephone);
+                    }
                 }
                 return;
             }
@@ -195,10 +198,12 @@ class ShippingInformationManagementPlugin
                 // Token bridge for mobile app: accept proof via header
                 $token = (string)$this->request->getHeader('X-Phone-Verification-Token');
                 $normalizedPhone = preg_replace('/[^0-9]/', '', (string)$telephone);
-                if ($token && $customerId > 0 && $normalizedPhone) {
+                if ($token && $normalizedPhone) {
                     if ($this->tokenManager->validateToken($token, $customerId, $normalizedPhone)) {
-                        // Persist verification for this specific saved address
-                        $this->customerHelper->saveVerifiedAddressPhone((int)$addressId, (string)$telephone);
+                        // Persist verification for this specific saved address (only for logged-in customers)
+                        if ($customerId > 0) {
+                            $this->customerHelper->saveVerifiedAddressPhone((int)$addressId, (string)$telephone);
+                        }
                         return;
                     }
                 }

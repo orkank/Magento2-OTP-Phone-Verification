@@ -48,15 +48,6 @@ class CustomerGraphql extends AbstractHelper
         try {
             // Check if context has user information
             if (isset($context) && is_object($context)) {
-                // Check if context has getUserId method (typical for GraphQL context)
-                if (method_exists($context, 'getUserId')) {
-                    $userId = $context->getUserId();
-                    if ($userId && $userId > 0) {
-                        $this->logger->info('GraphQL CustomerHelper: Found customer ID from getUserId: ' . $userId);
-                        return (int)$userId;
-                    }
-                }
-
                 // Check if context has getUserType and getUserId methods (Magento GraphQL pattern)
                 if (method_exists($context, 'getUserType') && method_exists($context, 'getUserId')) {
                     $userType = $context->getUserType();
@@ -65,6 +56,15 @@ class CustomerGraphql extends AbstractHelper
                     // Make sure it's a customer context, not admin
                     if ($userType === UserContextInterface::USER_TYPE_CUSTOMER && $userId > 0) {
                         $this->logger->info('GraphQL CustomerHelper: Found customer ID from context with user type: ' . $userId);
+                        return (int)$userId;
+                    }
+                }
+
+                // Fallback: if userType is not available, try getUserId (some setups)
+                if (method_exists($context, 'getUserId')) {
+                    $userId = $context->getUserId();
+                    if ($userId && $userId > 0) {
+                        $this->logger->info('GraphQL CustomerHelper: Found customer ID from getUserId (no userType): ' . $userId);
                         return (int)$userId;
                     }
                 }
